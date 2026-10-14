@@ -1,0 +1,20 @@
+Release candidate 2026-10-14.1
+Repository: parimere
+Package version: 2.0.0
+Branch: release/2026-10-review
+Local annotated tag: rc/2026-10-14.1
+Status: prepared for review; not published or deployed.
+
+Changes
+Exact comparison and planning, saved comparisons, history/catalog, reviewed imports, CSV/print, scenarios, OCR/barcodes, offline use and optional owner/member household sharing.
+
+Compatibility and rollout
+Use Node 24.13 or newer. npm ci prepares locked local OCR/barcode assets; serve the source dist directory with serve.mjs. Household sync is disabled by default. Back up its SQLite data while stopped before rollout and preserve membership keys privately.
+
+Checks
+npm test; npm run test:browser. Real local Chrome covers OCR/barcode, offline reload and two independent household memberships.
+The dated workspace release manifest records completed local checks and exact commits.
+
+Limits and release gates
+Real phone camera permissions, OS installation, live FX service and public hosting remain deployment checks. OCR vendor files are not cached for offline capture. Rollback must preserve local comparison files and the household database.
+Fresh npm registry vulnerability checks remain pending permission to send dependency metadata. No production service or database was changed.
