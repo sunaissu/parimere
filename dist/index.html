@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#2349ec" />
+    <meta
+      name="description"
+      content="Compare package prices, sizes, and multipacks. Find the better value with simple math."
+    />
+    <title>parimere — Which pack wins?</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232349ec'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-family='Arial' font-weight='bold' font-size='23' fill='%23dfff70'%3E%25%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <script type="module" src="./app.mjs"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <a class="wordmark" href="./" aria-label="parimere home"
+          ><span class="brand-icon" aria-hidden="true">%</span> parimere</a
+        ><label class="currency"
+          >Results in
+          <select id="currency">
+            <option value="PHP">PHP · ₱</option>
+            <option value="USD">USD · $</option>
+            <option value="EUR">EUR · €</option>
+            <option value="GBP">GBP · £</option>
+            <option value="JPY">JPY · ¥</option>
+          </select></label
+        >
+      </header>
+      <main>
+        <div class="intro">
+          <div>
+            <p class="eyebrow">THE GROCERY AISLE SHOWDOWN</p>
+            <h1>Big pack.<br /><span>Better deal?</span></h1>
+          </div>
+          <p class="intro-copy">
+            Put your packs head to head.<br />Let the numbers pick a winner.
+          </p>
+        </div>
+        <div class="examples">
+          <span>Try a matchup</span
+          ><button type="button" data-example="milk">Milk bottles</button
+          ><button type="button" data-example="rice">Rice bags</button
+          ><button type="button" data-example="snacks">Snack multipacks</button
+          ><button type="button" data-example="international">
+            Overseas deal
+          </button>
+        </div>
+        <p
+          class="currency-notice"
+          id="currency-notice"
+          role="status"
+          hidden
+        ></p>
+        <form id="compare-form" novalidate>
+          <div class="arena" id="arena">
+            <template id="product-template"
+              ><fieldset class="product">
+                <legend>
+                  <span class="letter"></span
+                  ><span class="contender-title"></span>
+                </legend>
+                <button class="remove-product" type="button">Remove</button>
+                <div class="field">
+                  <label for="a-name"
+                    >Product name
+                    <span class="optional">(optional)</span></label
+                  ><input
+                    id="a-name"
+                    maxlength="50"
+                    value="Little bottle"
+                    placeholder="e.g. Little bottle"
+                    autocomplete="off"
+                  />
+                </div>
+
+                <div class="field">
+                  <label for="a-currency">Price currency</label>
+                  <select id="a-currency"></select>
+                </div>
+                <div class="field">
+                  <label for="a-price">Price for the whole pack</label>
+                  <div class="money-input">
+                    <span class="currency-symbol">₱</span
+                    ><input
+                      id="a-price"
+                      type="number"
+                      min="0"
+                      max="1000000000"
+                      step="any"
+                      inputmode="decimal"
+                      value="149"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div class="exchange field" hidden>
+                  <label for="a-exchangeRate">Exchange rate</label>
+                  <div class="exchange-input">
+                    <span class="exchange-from">1 USD =</span
+                    ><input
+                      id="a-exchangeRate"
+                      type="number"
+                      min="0.0000000001"
+                      max="1000000000"
+                      step="any"
+                      inputmode="decimal"
+                      placeholder="Enter rate"
+                    /><span class="exchange-to">PHP</span>
+                  </div>
+                  <p class="field-hint rate-status" role="status"></p>
+                  <div class="rate-actions">
+                    <button type="button" class="retry-rate" hidden>
+                      Retry
+                    </button>
+                    <button type="button" class="rate-mode">
+                      Use my own rate
+                    </button>
+                  </div>
+                </div>
+                <div class="size-row">
+                  <div class="field">
+                    <label for="a-amount">Size of each</label
+                    ><input
+                      id="a-amount"
+                      type="number"
+                      min="0.000001"
+                      max="1000000000"
+                      step="any"
+                      inputmode="decimal"
+                      value="750"
+                      required
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="a-unit">Unit</label
+                    ><select id="a-unit">
+                      <option value="ml">mL</option>
+                      <option value="L">L</option>
+                      <option value="g">g</option>
+                      <option value="kg">kg</option>
+                      <option value="oz">oz · weight</option>
+                      <option value="lb">lb · weight</option>
+                      <option value="us-fl-oz">US fl oz</option>
+                      <option value="uk-fl-oz">UK fl oz</option>
+                      <option value="item">items</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="pack-row">
+                  <div class="field">
+                    <label for="a-pack">How many in the pack?</label
+                    ><input
+                      id="a-pack"
+                      type="number"
+                      min="1"
+                      max="1000000"
+                      step="1"
+                      inputmode="numeric"
+                      value="1"
+                      required
+                    />
+                  </div>
+                  <p>Single item? Keep this at 1.</p>
+                </div>
+
+                <details class="extra-costs">
+                  <summary>
+                    Extra costs <span class="extras-summary"></span>
+                  </summary>
+                  <p class="field-hint">
+                    Enter these amounts in
+                    <strong class="extras-currency">PHP</strong>. Leave blank
+                    for zero.
+                  </p>
+                  <div class="field">
+                    <label for="a-shipping">Shipping</label
+                    ><input
+                      id="a-shipping"
+                      type="number"
+                      min="0"
+                      max="1000000000"
+                      step="any"
+                      inputmode="decimal"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="a-feePercent">Payment fee (%)</label
+                    ><input
+                      id="a-feePercent"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="any"
+                      inputmode="decimal"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="a-fixedFee">Fixed fee / other costs</label
+                    ><input
+                      id="a-fixedFee"
+                      type="number"
+                      min="0"
+                      max="1000000000"
+                      step="any"
+                      inputmode="decimal"
+                      placeholder="0"
+                    />
+                  </div>
+                  <p class="field-hint">
+                    The percentage fee applies after duty, shipping and tax.
+                    Fixed costs and the refundable deposit follow. Don’t add fees
+                    already included in your price or exchange rate.
+                  </p>
+                </details>
+                <div class="unit-result">
+                  <span class="converted-total"></span
+                  ><span id="a-total">750 mL total</span
+                  ><strong id="a-rate">₱19.87 <small>/ 100 mL</small></strong>
+                </div>
+              </fieldset></template
+            >
+          </div>
+          <div class="add-row">
+            <button id="add-product" type="button">+ Add product</button
+            ><span id="product-count">2 products</span>
+          </div>
+          <div class="actions">
+            <p>Use the offer fields for discounts, or enter the final price with no offer rule.</p>
+            <button id="reset" type="button">Clear all</button>
+          </div>
+        </form>
+        <section class="verdict" id="verdict" aria-labelledby="winner-heading">
+          <div
+            class="verdict-copy"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <p class="eyebrow" id="result-label">BETTER VALUE</p>
+            <h2 id="winner-heading">Big bottle wins.</h2>
+            <p id="result-detail">4.87% cheaper for the same amount.</p>
+          </div>
+          <div class="saving">
+            <strong id="saving-value">4.87<span>%</span></strong
+            ><span id="saving-label">LESS PER UNIT</span>
+          </div>
+        </section>
+        <section class="ranking" id="ranking" aria-labelledby="ranking-heading">
+          <h2 id="ranking-heading">The lineup, best value first</h2>
+          <p class="field-hint">
+            Totals include only the costs you enter. Daily exchange rates are
+            estimates; your payment provider may charge more.
+          </p>
+          <ol id="ranking-list"></ol>
+        </section>
+        <details class="math">
+          <summary>Show me the math</summary>
+          <div id="math-content"></div>
+          <p>
+            Compare similar products. Lower unit price doesn’t account for
+            quality or how much you’ll actually use.
+          </p>
+        </details>
+      </main>
+      <footer>
+        <span>Small math. Happy wallet.</span
+        ><span>Calculated on your device. Household sharing is optional.</span>
+      </footer>
+    </div>
+  </body>
+</html>

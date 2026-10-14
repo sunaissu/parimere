@@ -1,0 +1,6 @@
+tesseract.js 7.0.0 — Apache-2.0 — https://github.com/naptha/tesseract.js.git
+tesseract.js-core 7.0.0 — Apache-2.0 — https://github.com/naptha/tesseract.js-core.git
+@zxing/browser 0.2.1 — MIT — https://github.com/zxing-js/browser
+@zxing/library 0.23.0 — Apache-2.0 — https://github.com/zxing-js/library
+@tesseract.js-data/eng 1.0.0 — MIT — https://github.com/naptha/tessdata.git
+English data package declares MIT; upstream Tesseract language data attribution: https://github.com/tesseract-ocr/tessdata (Apache-2.0).
