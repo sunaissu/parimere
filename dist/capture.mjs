@@ -54,18 +54,43 @@ export async function capturePhoto(file, mode) {
   }
   await script("/vendor/tesseract.min.js");
   let worker,
+    nativeWorker,
     expired = false,
     timer;
-  const job = (async () => {
-    worker = await globalThis.Tesseract.createWorker("eng", 1, {
+  let rejectInitialization;
+  const initializationFailure = new Promise((_, reject) => {
+    rejectInitialization = reject;
+  });
+  const OriginalWorker = globalThis.Worker;
+  let initialization;
+  try {
+    // The pinned library spawns synchronously, but returns its handle only after loading.
+    // Capture that one native worker and restore the constructor before yielding the thread.
+    globalThis.Worker = class extends OriginalWorker {
+      constructor(url, options) {
+        super(url, options);
+        nativeWorker = this;
+      }
+    };
+    initialization = globalThis.Tesseract.createWorker("eng", 1, {
       workerPath: "/vendor/worker.min.js",
       workerBlobURL: false,
       corePath: "/vendor/core",
       langPath: "/vendor/lang",
       cacheMethod: "none",
       logger: () => {},
-      errorHandler: () => {},
+      errorHandler: () =>
+        rejectInitialization(
+          new Error(
+            "OCR initialization failed. Try a smaller image or reload its local assets.",
+          ),
+        ),
     });
+  } finally {
+    globalThis.Worker = OriginalWorker;
+  }
+  const job = (async () => {
+    worker = await initialization;
     if (expired) {
       await worker.terminate();
       throw new Error("OCR timed out.");
@@ -76,6 +101,7 @@ export async function capturePhoto(file, mode) {
   try {
     return await Promise.race([
       job,
+      initializationFailure,
       new Promise((_, reject) => {
         timer = setTimeout(() => {
           expired = true;
@@ -85,8 +111,13 @@ export async function capturePhoto(file, mode) {
         }, 45000);
       }),
     ]);
+  } catch (error) {
+    throw error instanceof Error
+      ? error
+      : new Error("OCR could not read the image. Try another photo.");
   } finally {
     clearTimeout(timer);
     if (worker) await worker.terminate();
+    else nativeWorker?.terminate();
   }
 }

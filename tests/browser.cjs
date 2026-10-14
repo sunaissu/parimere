@@ -421,6 +421,54 @@ const root = path.resolve(__dirname, ".."),
     );
     await context.setOffline(false);
     assert.deepEqual(errors, []);
+    const stalledContext = await browser.newContext({
+      serviceWorkers: "block",
+    });
+    await stalledContext.route("**/vendor/worker.min.js", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/javascript",
+        body: "// Deliberately stalled engine for cleanup regression.",
+      }),
+    );
+    const stalledPage = await stalledContext.newPage();
+    await stalledPage.goto(url);
+    await stalledPage.clock.install();
+    await stalledPage.evaluate(async () => {
+      const { capturePhoto } = await import("/capture.mjs");
+      const c = document.createElement("canvas");
+      c.width = c.height = 20;
+      const blob = await new Promise((resolve) => c.toBlob(resolve));
+      const Native = globalThis.Worker;
+      globalThis.terminated = 0;
+      globalThis.started = false;
+      globalThis.Worker = class extends Native {
+        constructor(...args) {
+          super(...args);
+          globalThis.started = true;
+        }
+        terminate() {
+          globalThis.terminated++;
+          super.terminate();
+        }
+      };
+      globalThis.pendingOCR = capturePhoto(
+        new File([blob], "stalled.png", { type: "image/png" }),
+        "ocr",
+      ).then(
+        () => null,
+        (error) => error.message,
+      );
+    });
+    await stalledPage.waitForFunction(() => globalThis.started);
+    await stalledPage.clock.fastForward(46000);
+    const cleanup = await stalledPage.evaluate(async () => ({
+      message: await globalThis.pendingOCR,
+      terminated: globalThis.terminated,
+    }));
+    assert.match(cleanup.message, /45 seconds/);
+    assert.equal(cleanup.terminated, 1);
+    await stalledContext.close();
     console.log(
       "Chrome passed: saved comparison reload, undo, duplication, target/budget, reviewed export, CSV, scenarios, real local OCR/barcode, strict page CSP, 320/390/1440 px layouts, real household HTTP isolation/conflicts/revocation and offline reload.",
     );
