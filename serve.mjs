@@ -205,7 +205,9 @@ export function createAppServer({
           "Content-Security-Policy",
           "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; worker-src 'none'; object-src 'none'",
         );
-      const data = await readFile(new URL("./dist/" + file, import.meta.url));
+      let data = await readFile(new URL("./dist/" + file, import.meta.url));
+      if (file === "index.html" && store)
+        data = Buffer.from(data.toString("utf8").replace("</head>", '<meta name="parimere-household-sharing" content="enabled"></head>'));
       res.writeHead(200, {
         "Content-Type":
           types[file.split(".").pop()] || "application/octet-stream",

@@ -1,4 +1,4 @@
-const CACHE = "parimere-v2.0.15",
+const CACHE = "parimere-v2.0.16",
   FILES = [
     "/",
     "/index.html",

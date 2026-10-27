@@ -1155,7 +1155,7 @@ export function createWorkspace(api) {
     basket,
     prefs,
     dataSettings,
-    ...(!isNative ? [householdPanel({
+    ...(!isNative && document.querySelector('meta[name="parimere-household-sharing"]')?.content === "enabled" ? [householdPanel({
       showDialog: showToolDialog,
       current,
       load,
