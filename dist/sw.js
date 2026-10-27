@@ -1,4 +1,4 @@
-const CACHE = "parimere-v2.0.10",
+const CACHE = "parimere-v2.0.11",
   FILES = [
     "/",
     "/index.html",
@@ -9,6 +9,7 @@ const CACHE = "parimere-v2.0.10",
     "/default-currency.mjs",
     "/privacy.html",
     "/creator-mark.svg",
+    "/sunaissu-logo.svg",
     "/math.mjs",
     "/planning.mjs",
     "/optimizer-client.mjs",

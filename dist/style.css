@@ -37,13 +37,13 @@ body {
 }
 .startup-mark {
   display: block;
-  width: 216px;
+  width: 64px;
   max-width: 65vw;
   height: auto;
   margin: 0 auto;
 }
 .startup-creator {
-  margin: 28px 0 0;
+  margin: 20px 0 16px;
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 20px;
   font-weight: 600;
@@ -892,3 +892,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
   .ranking::details-content,.math::details-content { content-visibility:visible; }
   .ranking > ol,.ranking > p { display:block!important; }
 }
+
+.maker-credit { display: inline-flex; align-items: center; gap: 12px; color: #667085; font-size: 12px; flex-shrink: 0; }
+.maker-sunaissu { display: block; width: 100px; height: 30px; object-fit: contain; }
+.maker-bg { display: block; width: 24px; height: 12px; object-fit: contain; opacity: .65; }
+footer { flex-wrap: wrap; align-items: center; }
+@media (max-width: 650px) { footer { align-items: flex-start; gap: 10px; } }

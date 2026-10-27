@@ -18,6 +18,7 @@ const files = [
   "guide.html",
   "product.txt",
   "creator-mark.svg",
+  "sunaissu-logo.svg",
   "math.mjs",
   "planning.mjs",
   "optimizer-client.mjs",

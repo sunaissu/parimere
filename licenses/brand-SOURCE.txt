@@ -1,0 +1,5 @@
+Sunaissu wordmark: Sora SemiBold 600, lowercase, -0.015em tracking.
+Approved short right underline: 1.3em wide, 0.13em thick.
+Blue #285DCF; light blue #79B4FF; dark ink #172033.
+Letters are vector outlines from the locally licensed Sora font. No font or network request is needed to display the SVGs.
+bg_ mark: existing portfolio/public/logo-mark.svg, with its animation removed for product credits.
