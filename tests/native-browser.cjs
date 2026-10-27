@@ -53,7 +53,7 @@ const openDetails = (page) => page.evaluate(() => {
     server.listen(4194, "127.0.0.1");
     await once(server, "listening");
     browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || "C:/Program Files/Google/Chrome/Application/chrome.exe", headless: true });
-    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: "en-PH" });
     const externalRequests = [], assetRequests = [], errors = [];
     context.on("request", (request) => assetRequests.push(request.url()));
     await context.route("**/*", async (route) => {
