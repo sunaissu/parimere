@@ -64,8 +64,7 @@ export async function capturePhoto(file, mode) {
   const OriginalWorker = globalThis.Worker;
   let initialization;
   try {
-    // The pinned library spawns synchronously, but returns its handle only after loading.
-    // Capture that one native worker and restore the constructor before yielding the thread.
+    // Capture the worker spawned synchronously, then restore Worker before yielding.
     globalThis.Worker = class extends OriginalWorker {
       constructor(url, options) {
         super(url, options);
