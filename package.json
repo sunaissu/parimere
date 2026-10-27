@@ -9,7 +9,8 @@
     "prepare": "node scripts/prepare-vendor.mjs",
     "test:browser": "node tests/browser.cjs",
     "test:optimizer": "node tests/optimizer-browser.cjs",
-    "test:release-fixes": "node tests/release-fixes.cjs"
+    "test:release-fixes": "node tests/release-fixes.cjs",
+    "build:web": "node scripts/prepare-vendor.mjs && node scripts/prepare-search.mjs && node discovery/build.mjs"
   },
   "dependencies": {
     "@tesseract.js-data/eng": "1.0.0",

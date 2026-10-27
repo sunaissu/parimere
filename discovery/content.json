@@ -1,0 +1,42 @@
+{
+  "name": "Parimere",
+  "title": "Parimere unit price comparison: pack sizes, discounts and budgets",
+  "description": "Compare unit prices and purchase costs across different pack sizes and offers.",
+  "category": "ProductivityApplication",
+  "output": "dist",
+  "originEnv": "SITE_ORIGIN",
+  "mainMetadata": false,
+  "sections": [
+    {
+      "heading": "How do I compare two packs?",
+      "paragraphs": [
+        "Enter each price, pack size and quantity using compatible units. For example, compare a 500 g pack costing 4 with a 750 g pack costing 5 in the same currency. Their unit prices are 8 and about 6.67 per kilogram before extra costs."
+      ]
+    },
+    {
+      "heading": "What affects the result?",
+      "paragraphs": [
+        "Discounts, shipping, taxes, fees, waste and prepared yield can change the comparison. Choose the ranking and planning settings that match the purchase."
+      ]
+    },
+    {
+      "heading": "How is the starting currency selected?",
+      "paragraphs": [
+        "The web app uses the browser region when supported and otherwise defaults to USD. You can change it. Saved comparisons keep their original currencies."
+      ]
+    },
+    {
+      "heading": "Are the web and mobile apps identical?",
+      "paragraphs": [
+        "No. The mobile app supports manually entered prices and exchange rates, saved comparisons and reviewed file import/export. Receipt scanning, household sync and automatic exchange rates are not implemented in the current React Native mobile version."
+      ]
+    },
+    {
+      "heading": "Where is information stored?",
+      "paragraphs": [
+        "Calculations run locally. Web household sharing is optional and requires a configured server. Shared files leave the app only when you choose to share them."
+      ]
+    }
+  ],
+  "links": []
+}
