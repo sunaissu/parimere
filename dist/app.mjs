@@ -1,6 +1,7 @@
 import { comparePlanned } from "./planning.mjs";
 import { createWorkspace, extendTemplate, EXTRA_FIELDS } from "./workspace.mjs";
 import { readLocal, writeLocal } from "./storage.mjs";
+import { browserCurrency } from "./default-currency.mjs";
 const $ = (id) => document.getElementById(id);
 const fields = [
   "name",
@@ -257,7 +258,7 @@ function currencyOptions(select, selected) {
   );
   select.value = selected;
 }
-currencyOptions($("currency"), "PHP");
+currencyOptions($("currency"), browserCurrency());
 function letter(index) {
   let text = "";
   for (let n = index + 1; n > 0; n = Math.floor((n - 1) / 26))
@@ -667,7 +668,7 @@ workspace = createWorkspace({
   load: (doc) => {
     $("currency").value = currencies.includes(doc.currency)
       ? doc.currency
-      : "PHP";
+      : "USD";
     fill(doc.products);
   },
   add: (values) => {
