@@ -1,6 +1,7 @@
 import { comparePlanned } from "./planning.mjs";
 import { createWorkspace, extendTemplate, EXTRA_FIELDS } from "./workspace.mjs";
-import { readLocal, writeLocal } from "./storage.mjs";
+import { readLocal, writeLocal, localDataErased } from "./storage.mjs";
+import { isNative } from "./platform.mjs";
 import { browserCurrency } from "./default-currency.mjs";
 const $ = (id) => document.getElementById(id);
 const fields = [
@@ -18,6 +19,10 @@ const fields = [
 const form = $("compare-form"),
   arena = $("arena"),
   template = $("product-template");
+const desktopLayout = window.matchMedia("(min-width: 1000px)");
+const showDesktopRanking = () => { $("ranking").open = desktopLayout.matches; };
+showDesktopRanking();
+desktopLayout.addEventListener("change", showDesktopRanking);
 extendTemplate(template);
 fields.push(...EXTRA_FIELDS.map((row) => row[0]));
 const examples = {
@@ -85,6 +90,7 @@ try {
 } catch {}
 const rateRequests = new Map();
 async function fetchRate(source, base) {
+  if (isNative) throw new Error("Enter an exchange rate for this offline Android app.");
   const pair = source + "/" + base;
   const cached = rateCache.get(pair);
   if (
@@ -145,7 +151,7 @@ async function fetchRate(source, base) {
   }
 }
 function resetRate(card) {
-  card.fx = { pair: "", mode: "auto", status: "idle" };
+  card.fx = { pair: "", mode: isNative ? "manual" : "auto", status: "idle" };
   card.inputs.exchangeRate.value = "";
 }
 function updateRate(card, source, base) {
@@ -192,8 +198,9 @@ function updateRate(card, source, base) {
             : "Couldn’t get a recent rate. Retry or use your own rate.";
   card.element.querySelector(".rate-mode").textContent =
     state.mode === "manual" ? "Use automatic rate" : "Use my own rate";
+  card.element.querySelector(".rate-mode").hidden = isNative;
   card.element.querySelector(".retry-rate").hidden =
-    state.mode === "manual" || state.status === "loading";
+    isNative || state.mode === "manual" || state.status === "loading";
   card.element.querySelector(".retry-rate").textContent = "Refresh daily rate";
 }
 
@@ -206,7 +213,7 @@ const numeric = (n) =>
   }).format(n);
 
 const money = (value, currency = $("currency").value) => {
-  const format = new Intl.NumberFormat(undefined, {
+  const format = new Intl.NumberFormat(workspace?.locale(), {
     style: "currency",
     currency,
     currencyDisplay: "code",
@@ -215,7 +222,7 @@ const money = (value, currency = $("currency").value) => {
   const tiny = value > 0 && value < 0.000001;
   return (
     (tiny ? "< " : "") +
-    new Intl.NumberFormat(undefined, {
+    new Intl.NumberFormat(workspace?.locale(), {
       style: "currency",
       currency,
       currencyDisplay: "code",
@@ -314,15 +321,14 @@ function createCard(values) {
 
   resetRate(card);
   if (
-    values.fx &&
-    values.fx.pair === inputs.currency.value + "/" + $("currency").value &&
+    (!values.fx || values.fx.pair === inputs.currency.value + "/" + $("currency").value) &&
     values.exchangeRate
   ) {
     card.fx = {
-      pair: values.fx.pair,
-      mode: values.fx.mode === "manual" ? "manual" : "saved",
+      pair: inputs.currency.value + "/" + $("currency").value,
+      mode: isNative || !values.fx || values.fx.mode === "manual" ? "manual" : "saved",
       status: "ready",
-      date: values.fx.date,
+      date: values.fx?.date || "",
     };
     inputs.exchangeRate.value = values.exchangeRate;
   }
@@ -348,7 +354,7 @@ function createCard(values) {
     cards.splice(index, 1);
     element.remove();
     render();
-    cards[Math.min(index, cards.length - 1)].inputs.name.focus();
+    cards[Math.min(index, cards.length - 1)].inputs.price.focus();
   });
   cards.push(card);
   arena.append(element);
@@ -366,11 +372,12 @@ function empty(unit = "ml") {
   return { name: "", price: "", amount: "", unit, pack: "1" };
 }
 function render() {
+  if (localDataErased()) return;
   clearTimeout(timer);
+  $("verdict").setAttribute("aria-busy", "false");
   cards.forEach((card, i) => {
     card.element.querySelector(".letter").textContent = letter(i);
-    card.element.querySelector(".contender-title").textContent =
-      "Contender " + letter(i);
+    card.element.querySelector(".contender-title").textContent = name(i);
     card.element.classList.toggle("product-a", i % 2 === 0);
     card.element.classList.toggle("product-b", i % 2 === 1);
     card.element.classList.remove("best-value");
@@ -404,12 +411,34 @@ function render() {
     card.element.querySelector(".extras-summary").textContent = hasExtras
       ? "· included"
       : "";
+    const adjustments = [];
+    if (Number(card.inputs.pack.value) > 1)
+      adjustments.push(card.inputs.pack.value + " in pack");
+    if (foreign) adjustments.push(source);
+    if (card.inputs.discount.value !== "none") adjustments.push("offer");
+    if (hasExtras || ["taxPercent", "dutyPercent", "deposit", "rebate"].some(
+      (key) => Number(card.inputs[key].value) > 0,
+    )) adjustments.push("costs");
+    if (Number(card.inputs.wastePercent.value) > 0 ||
+      Number(card.inputs.yieldFactor.value || 1) !== 1)
+      adjustments.push("adjusted quantity");
+    card.element.querySelector(".pack-options-summary").textContent =
+      adjustments.length ? " · " + adjustments.join(", ") : "";
+    const discount = card.inputs.discount.value;
+    card.inputs.discountValue.closest(".field").hidden =
+      !["percent", "fixed"].includes(discount);
+    for (const key of ["offerCount", "offerPrice"])
+      card.inputs[key].closest(".field").hidden = discount !== "multibuy";
+    card.element.querySelector('label[for="' + card.inputs.amount.id + '"]').textContent =
+      Number(card.inputs.pack.value) > 1 ? "Size of each item" : "Size";
 
     const button = card.element.querySelector(".remove-product");
     button.disabled = cards.length <= 2;
+    button.hidden = cards.length <= 2;
     button.setAttribute("aria-label", "Remove contender " + letter(i));
   });
   $("product-count").textContent = cards.length + " products";
+  $("product-count").hidden = cards.length <= 2;
   try {
     const pending = cards.find(
       (card) =>
@@ -437,6 +466,8 @@ function render() {
     $("verdict").classList.remove("waiting");
     cards.forEach((card, i) => {
       card.convertedTotal.textContent = "Total: " + money(result.prices[i]);
+      card.convertedTotal.hidden = card.inputs.currency.value === $("currency").value &&
+        result.prices[i] === Number(card.inputs.price.value);
       card.total.textContent =
         numeric(result.totals[i]) + " " + result.baseUnit + " total";
       card.rate.replaceChildren(
@@ -447,7 +478,8 @@ function render() {
       card.rate.append(small);
       card.element.classList.toggle("best-value", result.winners.includes(i));
     });
-    $("result-label").textContent = tied ? "SHARED BEST VALUE" : "BEST VALUE";
+    $("result-label").textContent = (tied ? "SHARED BEST VALUE" : "BEST VALUE") +
+      (workspace.options().rank === "net" ? " · AFTER REFUNDS" : "");
     $("winner-heading").textContent = tied
       ? result.winners.length === cards.length
         ? "It’s a tie. Pick your pack."
@@ -513,7 +545,7 @@ function render() {
           ? "Total " + money(result.prices[i]) + "."
           : (card.fx.mode === "manual"
               ? "Your rate: 1 "
-              : "Daily rate (" + card.fx.date + "): 1 ") +
+              : (card.fx.mode === "saved" ? "Saved rate (" : "Daily rate (") + card.fx.date + "): 1 ") +
             source +
             " = " +
             numeric(breakdown.exchangeRate) +
@@ -593,8 +625,8 @@ function render() {
   } catch (error) {
     workspace.result(null);
     $("verdict").classList.add("waiting");
-    $("result-label").textContent = "YOUR MATCHUP";
-    $("winner-heading").textContent = "Let’s make it a fair fight.";
+    $("result-label").textContent = "CHECK YOUR ENTRIES";
+    $("winner-heading").textContent = "Check the pack details.";
     $("result-detail").textContent = error.message;
     cards.forEach((card) => {
       card.rate.textContent = "—";
@@ -608,6 +640,7 @@ function render() {
   }
 }
 form.addEventListener("input", () => {
+  workspace.invalidateOptimization();
   clearTimeout(timer);
   timer = setTimeout(render, 180);
 });
@@ -617,6 +650,7 @@ form.addEventListener("submit", (e) => {
   render();
 });
 $("currency").addEventListener("change", () => {
+  const cleared = workspace.currencyChanged($("currency").value, true);
   cards.forEach(resetRate);
   const foreign = cards.some(
     (card) => card.inputs.currency.value !== $("currency").value,
@@ -625,19 +659,25 @@ $("currency").addEventListener("change", () => {
   $("currency-notice").textContent =
     "Results are now in " +
     $("currency").value +
-    ". Product prices and costs keep their original currencies. Exchange rates update automatically.";
+    ". Product prices and costs keep their original currencies. " +
+    (isNative ? "Enter your exchange rates for foreign products." : "Exchange rates update automatically.") + cleared;
+  if (cleared) $("currency-notice").hidden = false;
   render();
 });
 document.querySelectorAll("[data-example]").forEach((button) =>
   button.addEventListener("click", () => {
     const international = button.dataset.example === "international";
-    if (international) $("currency").value = "PHP";
+    if (international) {
+      workspace.currencyChanged("PHP");
+      $("currency").value = "PHP";
+    }
     workspace.remember();
     fill(examples[button.dataset.example]);
     if (international) {
       $("currency-notice").hidden = false;
       $("currency-notice").textContent =
-        "Sample prices and fees, with the latest available daily exchange rate.";
+        isNative ? "Sample prices and fees. Enter your exchange rate to compare." :
+          "Sample prices and fees, with the latest available daily exchange rate.";
     }
   }),
 );
@@ -649,18 +689,21 @@ $("add-product").addEventListener("click", () => {
   workspace.remember();
   const card = createCard(empty(cards[0]?.inputs.unit.value || "ml"));
   render();
-  card.inputs.name.focus();
+  card.inputs.price.focus();
 });
 $("reset").addEventListener("click", () => {
   workspace.remember();
   fill([empty(), empty()]);
-  cards[0].inputs.name.focus();
+  cards[0].inputs.price.focus();
 });
 let workspace;
 workspace = createWorkspace({
   currency: () => $("currency").value,
   setCurrency: (value) => {
-    if (currencies.includes(value)) $("currency").value = value;
+    if (currencies.includes(value)) {
+      workspace.currencyChanged(value);
+      $("currency").value = value;
+    }
   },
   products: () => cards.map(read),
   read,
@@ -688,9 +731,9 @@ else {
   workspace.initialize();
   fill(examples.milk);
 }
-if ("serviceWorker" in navigator)
+if (!isNative && "serviceWorker" in navigator)
   navigator.serviceWorker
-    .register("/sw.js")
+    .register("/sw.js", { updateViaCache: "none" })
     .catch(() =>
       workspace.message(
         "Offline installation is unavailable in this browser. Saving and exports still work.",

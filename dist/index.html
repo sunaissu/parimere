@@ -16,10 +16,31 @@
     />
     <link rel="stylesheet" href="./style.css" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <script type="module" src="./app.mjs"></script>
+    <script type="module" src="./startup.mjs"></script>
   </head>
   <body>
-    <div class="shell">
+    <section class="startup" id="startup" aria-label="Opening Parimere" aria-busy="true">
+      <div class="startup-brand">
+        <img class="startup-mark" src="./creator-mark.svg" alt="bg_" width="216" height="102" />
+        <p class="startup-creator">sunaissu</p>
+      </div>
+      <div class="startup-message">
+        <p id="startup-status" role="status">Opening Parimere…</p>
+        <p class="startup-recovery" id="startup-recovery"><a href="./">Reload app</a></p>
+      </div>
+    </section>
+    <noscript>
+      <style>#startup { display: none; }</style>
+      <section class="startup" aria-label="Parimere needs JavaScript">
+        <div class="startup-brand">
+          <p class="startup-creator">parimere</p>
+          <h1>Parimere: unit price calculator</h1>
+          <p>Compare prices across pack sizes and multipacks, including discounts and extra costs. Turn on JavaScript to open your comparison.</p>
+          <a href="./">Reload app</a>
+        </div>
+      </section>
+    </noscript>
+    <div class="shell" id="app-shell" hidden inert>
       <header>
         <a class="wordmark" href="./" aria-label="parimere home"
           ><span class="brand-icon" aria-hidden="true">%</span> parimere</a
@@ -35,30 +56,35 @@
         >
       </header>
       <main>
+        <section id="storage-notice" class="storage-notice" role="status" hidden>
+          <p></p>
+        </section>
         <div class="intro">
           <div>
-            <p class="eyebrow">THE GROCERY AISLE SHOWDOWN</p>
-            <h1>Big pack.<br /><span>Better deal?</span></h1>
+            <h1>Which pack <span>costs less?</span></h1>
           </div>
           <p class="intro-copy">
-            Put your packs head to head.<br />Let the numbers pick a winner.
+            Enter each pack's price and size. Compare value as you type.
           </p>
         </div>
-        <div class="examples">
-          <span>Try a matchup</span
-          ><button type="button" data-example="milk">Milk bottles</button
+        <details class="example-picker">
+          <summary>Try an example</summary>
+          <div class="examples">
+          <button type="button" data-example="milk">Milk bottles</button
           ><button type="button" data-example="rice">Rice bags</button
           ><button type="button" data-example="snacks">Snack multipacks</button
           ><button type="button" data-example="international">
             Overseas deal
           </button>
-        </div>
+          </div>
+        </details>
         <p
           class="currency-notice"
           id="currency-notice"
           role="status"
           hidden
         ></p>
+        <div class="comparison-layout">
         <form id="compare-form" novalidate>
           <div class="arena" id="arena">
             <template id="product-template"
@@ -128,7 +154,7 @@
                 </div>
                 <div class="size-row">
                   <div class="field">
-                    <label for="a-amount">Size of each</label
+                    <label for="a-amount">Size</label
                     ><input
                       id="a-amount"
                       type="number"
@@ -231,39 +257,41 @@
               </fieldset></template
             >
           </div>
+          <div class="form-controls">
           <div class="add-row">
             <button id="add-product" type="button">+ Add product</button
             ><span id="product-count">2 products</span>
           </div>
           <div class="actions">
-            <p>Use the offer fields for discounts, or enter the final price with no offer rule.</p>
-            <button id="reset" type="button">Clear all</button>
+            <button id="reset" type="button">Clear comparison</button>
+          </div>
           </div>
         </form>
-        <section class="verdict" id="verdict" aria-labelledby="winner-heading">
+        <div class="results-panel" role="region" aria-label="Comparison results">
+        <section class="verdict waiting" id="verdict" aria-labelledby="winner-heading" aria-busy="true">
           <div
             class="verdict-copy"
             role="status"
             aria-live="polite"
             aria-atomic="true"
           >
-            <p class="eyebrow" id="result-label">BETTER VALUE</p>
-            <h2 id="winner-heading">Big bottle wins.</h2>
-            <p id="result-detail">4.87% cheaper for the same amount.</p>
+            <p class="eyebrow" id="result-label">YOUR COMPARISON</p>
+            <h2 id="winner-heading">Loading your comparison…</h2>
+            <p id="result-detail"></p>
           </div>
           <div class="saving">
-            <strong id="saving-value">4.87<span>%</span></strong
-            ><span id="saving-label">LESS PER UNIT</span>
+            <strong id="saving-value"></strong
+            ><span id="saving-label"></span>
           </div>
         </section>
-        <section class="ranking" id="ranking" aria-labelledby="ranking-heading">
-          <h2 id="ranking-heading">The lineup, best value first</h2>
+        <details class="ranking" id="ranking" hidden>
+          <summary id="ranking-heading">Compare unit prices</summary>
           <p class="field-hint">
             Totals include only the costs you enter. Daily exchange rates are
             estimates; your payment provider may charge more.
           </p>
           <ol id="ranking-list"></ol>
-        </section>
+        </details>
         <details class="math">
           <summary>Show me the math</summary>
           <div id="math-content"></div>
@@ -272,10 +300,14 @@
             quality or how much you’ll actually use.
           </p>
         </details>
+        </div>
+        </div>
       </main>
       <footer>
-        <span>Small math. Happy wallet.</span
-        ><span>Calculated on your device. Household sharing is optional.</span>
+        <span>Calculated on your device.</span>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/guide.html">Comparison guide</a>
+        <a href="/THIRD_PARTY_NOTICES.txt">Open-source notices</a>
       </footer>
     </div>
   </body>

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Parimere privacy and data</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <p><a href="./">Back to Parimere</a></p>
+      <h1>Privacy and data</h1>
+      <p>Draft for release review, updated October 21, 2026. The publisher's legal identity, public support/privacy email, public policy URL and web-host logging details still need to be completed before publication.</p>
+      <h2>Your comparisons</h2>
+      <p>Parimere stores your open and saved comparisons, product catalog and history, preferences, scenarios and cached exchange rates on your device. These stay until you erase them, clear browser/app storage, or uninstall the Android app. Browser storage can also be cleared by your browser.</p>
+      <p>Selected receipt and label images are processed on your device for English text or barcode recognition. Parimere does not upload those images. The image and extracted text stay in memory during review. A price you accept becomes part of the comparison.</p>
+      <h2>Android app</h2>
+      <p>The initial Android build has no accounts, household sharing, automatic exchange-rate requests, ads, billing or analytics SDK. Enter exchange rates yourself. Its calculation and scanning files are bundled with the app. Android backup is disabled for app data.</p>
+      <p>When you export a file, Android lets you choose an app or location to receive it. That destination handles the copy under its own rules. Temporary export files are kept in the app cache, removed after 24 hours on a subsequent startup, or removed when you erase local data. Copies you save or share elsewhere remain until you delete them there.</p>
+      <h2>Web app</h2>
+      <p>Automatic exchange rates request currency pairs from api.frankfurter.dev. The provider receives the currency codes and ordinary connection metadata such as your IP address. Provider logging and retention need to be verified before public deployment. The web host also receives connection metadata; its operator, purposes and log retention must be stated in the published policy.</p>
+      <p>Optional household sharing is disabled by default. On a server that enables it, creating or joining a household sends the member name you enter. A reviewed upload sends the visible comparison to that server for household members to access. Membership keys are kept in this browser session; the server stores key digests. Keys expire after 90 days and invitations after one day. A household with no unexpired members is removed on the next household request. The owner can delete the shared household; members can leave. Backup retention and a public deletion-request contact must be defined before enabling this service publicly.</p>
+      <h2>Erase data</h2>
+      <p>Open More tools, then Data on this device, and choose Delete all local data. It removes local comparisons, history, preferences, cached data and membership credentials on this device. It cannot remove copies already exported, shared to other devices, or stored on a household server. Delete or leave a household first if needed. Clearing the current comparison alone does not erase saved data.</p>
+      <h2>Contact and release status</h2>
+      <p>A public support and privacy contact has not been configured yet. This draft is available for testing and does not satisfy the final Play Store privacy-policy requirement until publisher and deployment details are completed and the page is publicly hosted.</p>
+      <p><a href="./THIRD_PARTY_NOTICES.txt">Third-party software notices</a></p>
+    </main>
+  </body>
+</html>

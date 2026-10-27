@@ -1,12 +1,19 @@
-const CACHE = "parimere-v2.0.0",
+const CACHE = "parimere-v2.0.10",
   FILES = [
     "/",
     "/index.html",
     "/style.css",
     "/app.mjs",
+    "/startup.mjs",
+    "/platform.mjs",
     "/default-currency.mjs",
+    "/privacy.html",
+    "/creator-mark.svg",
     "/math.mjs",
     "/planning.mjs",
+    "/optimizer-client.mjs",
+    "/optimizer-worker.mjs",
+    "/edit-session.mjs",
     "/storage.mjs",
     "/workspace.mjs",
     "/capture.mjs",
@@ -15,10 +22,15 @@ const CACHE = "parimere-v2.0.0",
     "/icon.svg",
     "/icon-192.png",
     "/icon-512.png",
+    "/THIRD_PARTY_NOTICES.txt",
   ];
-self.addEventListener("install", (event) =>
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES))),
-);
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE)
+      .then((cache) => cache.addAll(FILES))
+      .then(() => self.skipWaiting()),
+  );
+});
 self.addEventListener("activate", (event) =>
   event.waitUntil(
     caches

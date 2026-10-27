@@ -1,7 +1,6 @@
 import {
   comparePlanned,
   calculate,
-  optimizeMix,
   basketTotals,
   MEASURES,
 } from "./planning.mjs";
@@ -10,11 +9,19 @@ import {
   safeJSON,
   readLocal,
   writeLocal,
+  eraseLocalData,
+  localDataErased,
   csvCell,
   PRODUCT_FIELDS,
+  storageWritable,
+  storageIssues,
+  protectLocalData,
+  replaceLocalData,
 } from "./storage.mjs";
+import { createOptimizerClient } from "./optimizer-client.mjs";
 import { capturePhoto } from "./capture.mjs";
 import { householdPanel } from "./household.mjs";
+import { isNative, saveFile, printReport, clearNativeFiles } from "./platform.mjs";
 
 export const EXTRA_FIELDS = [
   [
@@ -59,15 +66,40 @@ export function extendTemplate(template) {
   for (const [key, unit] of Object.entries(MEASURES))
     if (![...units.options].some((o) => o.value === key))
       units.add(new Option(key + " · " + unit.family, key));
-  const details = node("details", undefined, "advanced-fields");
-  details.append(node("summary", "Offers, usable quantity & product details"));
-  details.append(
-    node(
-      "p",
-      "Price is for one pack; BOGO buys one and receives two. Multibuy replaces the price with the entered total for that many packs. All extra costs, deposits and rebates apply once per offer. Yield multiplies quantity within the same measurement family.",
-      "field-hint",
-    ),
+  const options = node("details", undefined, "pack-options");
+  const summary = node("summary", "Pack options");
+  summary.append(node("span", "", "pack-options-summary"));
+  options.append(summary);
+  options.append(
+    card.querySelector("#a-name").closest(".field"),
+    card.querySelector("#a-currency").closest(".field"),
+    card.querySelector(".pack-row"),
   );
+  const groups = [
+    ["Offers", ["discount", "discountValue", "offerCount", "offerPrice"],
+      "Choose an offer, or enter the final price above. BOGO includes two packs. Multibuy uses the total price for the entered pack count."],
+    ["Usable quantity", ["wastePercent", "yieldFactor"],
+      "Waste reduces the amount you use. Yield multiplies the prepared amount within the same unit family."],
+    ["Product details", ["store", "date", "barcode", "notes", "quality", "targetPrice"]],
+    ["Basket settings", ["basketItem", "basketCount"]],
+  ];
+  const containers = new Map();
+  for (const [title, keys, hint] of groups) {
+    const group = node("details", undefined, "advanced-fields");
+    group.append(node("summary", title));
+    if (hint) group.append(node("p", hint, "field-hint"));
+    options.append(group);
+    keys.forEach((key) => containers.set(key, group));
+  }
+  const extras = card.querySelector(".extra-costs");
+  options.insertBefore(extras, options.querySelector(".advanced-fields"));
+  ["taxPercent", "dutyPercent", "deposit", "rebate"].forEach((key) =>
+    containers.set(key, extras),
+  );
+  const offerNames = {
+    none: "No offer", percent: "Percentage discount", fixed: "Fixed discount",
+    bogo: "Buy one, get one free", multibuy: "Multibuy total price",
+  };
   for (const [key, label, type, choices] of EXTRA_FIELDS) {
     const wrapper = node("div", undefined, "field"),
       caption = node("label", label),
@@ -75,7 +107,7 @@ export function extendTemplate(template) {
     input.id = "a-" + key;
     caption.htmlFor = input.id;
     if (type === "select")
-      choices.forEach((value) => input.add(new Option(value, value)));
+      choices.forEach((value) => input.add(new Option(offerNames[value] || value, value)));
     else {
       input.type = type || "number";
       input.maxLength = ["notes", "quality"].includes(key) ? 1000 : 200;
@@ -87,18 +119,10 @@ export function extendTemplate(template) {
       }
     }
     wrapper.append(caption, input);
-    details.append(wrapper);
+    containers.get(key).append(wrapper);
   }
-  card.insertBefore(details, card.querySelector(".unit-result"));
-  card.append(node("div", undefined, "card-tools"));
-}
-function download(text, name, type) {
-  const url = URL.createObjectURL(new Blob([text], { type })),
-    a = node("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  options.append(node("div", undefined, "card-tools"));
+  card.insertBefore(options, card.querySelector(".unit-result"));
 }
 const format = (n, currency, locale) =>
   new Intl.NumberFormat(
@@ -120,7 +144,27 @@ export function createWorkspace(api) {
   let saved = readLocal("saved", []),
     catalog = readLocal("catalog", []),
     preferences = readLocal("preferences", {}),
-    basketSettings = readLocal("basket", {});
+    basketRecord = readLocal("basket", {});
+  const isRecord = (value) => !!value && typeof value === "object" && !Array.isArray(value);
+  const legacyBasket = isRecord(basketRecord) && !Object.hasOwn(basketRecord, "currency") && Object.keys(basketRecord).length > 0;
+  const basketValid = isRecord(basketRecord) && (Object.keys(basketRecord).length === 0 || (
+    typeof basketRecord.currency === "string" && /^[A-Z]{3}$/.test(basketRecord.currency) &&
+    isRecord(basketRecord.stores) && Object.values(basketRecord.stores).every((fees) =>
+      isRecord(fees) && ["shipping", "minimum", "freeShipping"].every((key) => fees[key] === undefined ||
+        (typeof fees[key] === "string" && (fees[key] === "" || (Number.isFinite(Number(fees[key])) && Number(fees[key]) >= 0))))
+    )
+  ));
+  let basketProtected = storageIssues().some((issue) => issue.key === "basket");
+  if (legacyBasket || !basketValid) {
+    basketProtected = true;
+    protectLocalData("basket", legacyBasket
+      ? "Saved delivery settings have no recorded currency. The original values have been kept. Download recovery data before resetting saved delivery settings."
+      : "Saved delivery settings could not be read. The original values have been kept. Download recovery data before resetting saved delivery settings.");
+  }
+  let basketSettings = basketProtected ? {} : basketRecord?.stores || {},
+    basketCurrency = basketProtected ? "" : basketRecord?.currency || "",
+    comparisonCurrency = api.currency();
+  const savedCount = Array.isArray(saved) ? saved.length : -1;
   if (!Array.isArray(saved)) saved = [];
   saved = saved.slice(0, 40).filter((v) => {
     try {
@@ -130,6 +174,9 @@ export function createWorkspace(api) {
       return false;
     }
   });
+  if (savedCount !== saved.length)
+    protectLocalData("saved", "Some saved comparisons could not be read. The original collection has been kept and saving over it is blocked.");
+  const catalogCount = Array.isArray(catalog) ? catalog.length : -1;
   if (!Array.isArray(catalog)) catalog = [];
   catalog = catalog.slice(0, 200).filter((v) => {
     try {
@@ -161,6 +208,8 @@ export function createWorkspace(api) {
       return false;
     }
   });
+  if (catalogCount !== catalog.length)
+    protectLocalData("catalog", "Some catalog entries could not be read. The original catalog has been kept and saving over it is blocked.");
   if (!preferences || typeof preferences !== "object") preferences = {};
   if (
     !["en-PH", "en-US", "en-GB", "de-DE", "fr-FR", "ja-JP"].includes(
@@ -174,19 +223,28 @@ export function createWorkspace(api) {
     Array.isArray(basketSettings)
   )
     basketSettings = {};
-  try {
-    initial = documentData(readLocal("current", null));
-  } catch {}
-  try {
-    scenario = documentData(readLocal("scenario", null));
-  } catch {}
-  const host = node("section", undefined, "workspace"),
+  const storedCurrent = readLocal("current", null);
+  if (storedCurrent !== null) {
+    try { initial = documentData(storedCurrent); }
+    catch { protectLocalData("current", "The open comparison could not be restored. Its saved data has been kept. Export recovery data before resetting it."); }
+  }
+  const storedScenario = readLocal("scenario", null);
+  if (storedScenario !== null) {
+    try { scenario = documentData(storedScenario); }
+    catch { protectLocalData("scenario", "The original scenario could not be restored. Its saved data has been kept."); }
+  }
+  const host = node("details", undefined, "workspace"),
     status = node(
       "p",
-      "Comparisons stay on this device unless you explicitly export or share them.",
+      "",
       "workspace-status",
     );
   status.role = "status";
+  status.hidden = true;
+  const workspaceSummary = node("summary", "More tools");
+  const activePlan = node("span", "", "active-plan");
+  workspaceSummary.append(activePlan);
+  host.append(workspaceSummary);
   const toolbar = node("div", undefined, "workspace-toolbar"),
     nameInput = node("input");
   nameInput.id = "comparison-name";
@@ -197,13 +255,26 @@ export function createWorkspace(api) {
   savedList.setAttribute("aria-label", "Saved comparisons");
   const message = (text) => {
     status.textContent = text;
+    status.hidden = !text;
   };
+  function showStorageIssues() {
+    const issues = storageIssues();
+    const notice = document.getElementById("storage-notice");
+    if (!issues.length) {
+      if (storageWritable()) notice.hidden = true;
+      return;
+    }
+    notice.hidden = false;
+    notice.querySelector("p").textContent = issues.map((issue) => issue.message).join(" ") +
+      " Your stored data has been kept. Export the current comparison or download recovery data under Data on this device before reloading.";
+  }
   const safely = (action) => () => {
     try {
       const result = action();
-      if (result?.catch) result.catch((error) => message(error.message));
+      if (result?.catch) result.catch((error) => { message(error.message); showStorageIssues(); });
     } catch (error) {
       message(error.message);
+      showStorageIssues();
     }
   };
   const current = () =>
@@ -215,10 +286,12 @@ export function createWorkspace(api) {
       options,
     });
   const persist = () => {
+    if (localDataErased() || !storageWritable()) return;
     try {
       writeLocal("current", current());
     } catch (error) {
       message(error.message);
+      showStorageIssues();
     }
   };
   const remember = () => {
@@ -226,11 +299,13 @@ export function createWorkspace(api) {
       history.push(current());
       history = history.slice(-20);
       undo.disabled = false;
+      quickUndo.hidden = false;
     } catch {}
   };
   window.addEventListener("beforeunload", persist);
   const load = (value) => {
     const data = documentData(value);
+    changeCurrency(data.currency, false);
     currentName = data.name;
     nameInput.value = currentName;
     options = data.options;
@@ -250,6 +325,7 @@ export function createWorkspace(api) {
       const previous = history.pop();
       if (previous) load(previous);
       undo.disabled = !history.length;
+      quickUndo.hidden = !history.length;
     }),
   );
   undo.disabled = true;
@@ -363,12 +439,21 @@ export function createWorkspace(api) {
     input.step = "any";
     input.inputMode = "decimal";
     input.setAttribute("aria-label", label);
+    if (key === "basis") {
+      input.placeholder = "Automatic";
+      input.setAttribute("aria-describedby", "comparison-basis-hint");
+    }
     optionInputs[key] = input;
     input.addEventListener("input", () => {
       options[key] = input.value;
       api.render();
     });
     row.append(input);
+    if (key === "basis") {
+      const hint = node("span", "Leave blank or use 0 for the automatic amount.", "field-hint");
+      hint.id = "comparison-basis-hint";
+      row.append(hint);
+    }
     plan.append(row);
   }
   const rank = node("select");
@@ -391,18 +476,59 @@ export function createWorkspace(api) {
       input.value = options[key] || "";
     rank.value = options.rank || "cash";
   }
+  function changeCurrency(next, clearBudget = true) {
+    const changed = next !== comparisonCurrency;
+    comparisonCurrency = next;
+    const cleared = [];
+    if (changed && clearBudget && options.budget !== undefined && options.budget !== "") {
+      delete options.budget;
+      syncOptions();
+      cleared.push("checkout budget");
+    }
+    if (basketCurrency !== next && Object.keys(basketSettings).length) {
+      basketSettings = {};
+      cleared.push("store delivery fees and thresholds");
+      basketRows.replaceChildren();
+      basketResult.replaceChildren();
+    }
+    if (basketCurrency !== next) {
+      basketCurrency = next;
+      if (storageWritable() && !basketProtected) {
+        try { writeLocal("basket", { currency: next, stores: basketSettings }); }
+        catch (error) { message(error.message); showStorageIssues(); }
+      }
+    }
+    if (cleared.length) message("Result currency changed to " + next + ". Re-enter your " + cleared.join(" and ") + " in " + next + ".");
+    return cleared.length ? " Re-enter your " + cleared.join(" and ") + " in " + next + "." : "";
+  }
   const report = node("div", undefined, "planning-report");
   plan.append(report);
-  const optimizer = node("div");
-  plan.append(
-    button(
+  const optimizer = node("div"),
+    optimizerActions = node("div", undefined, "optimizer-actions"),
+    optimizerClient = createOptimizerClient();
+  optimizer.setAttribute("role", "status");
+  let optimizerRun = 0;
+  function cancelOptimization() {
+    optimizerRun++;
+    optimizerClient.cancel();
+    optimizeButton.disabled = false;
+    optimizeButton.textContent = "Find least-cost pack mix";
+    cancelOptimizer.hidden = true;
+    optimizer.removeAttribute("aria-busy");
+  }
+  const optimizeButton = button(
       "Find least-cost pack mix",
-      safely(() => {
-        const result = optimizeMix(
-          api.products(),
-          api.currency(),
-          options.target,
-        );
+      safely(async () => {
+        api.render();
+        const products = api.products(), currency = api.currency(), run = ++optimizerRun;
+        optimizeButton.disabled = true;
+        optimizeButton.textContent = "Finding pack mix…";
+        cancelOptimizer.hidden = false;
+        optimizer.setAttribute("aria-busy", "true");
+        optimizer.replaceChildren(node("p", "Finding the lowest checkout cost. You can keep editing or cancel."));
+        try {
+        const result = await optimizerClient.run(products, currency, options.target);
+        if (run !== optimizerRun || localDataErased()) return;
         optimizer.replaceChildren(
           node(
             "p",
@@ -418,7 +544,7 @@ export function createWorkspace(api) {
                   count
                     ? count +
                       " × " +
-                      (api.products()[i].name || "Pack " + (i + 1))
+                      (products[i].name || "Pack " + (i + 1))
                     : null,
                 )
                 .filter(Boolean)
@@ -426,10 +552,28 @@ export function createWorkspace(api) {
               ". Per-offer costs repeat. Use the basket panel for shared delivery.",
           ),
         );
+        } catch (error) {
+          if (run === optimizerRun && error.name !== "AbortError")
+            optimizer.replaceChildren(node("p", error.message));
+        } finally {
+          if (run === optimizerRun) {
+            optimizeButton.disabled = false;
+            optimizeButton.textContent = "Find least-cost pack mix";
+            cancelOptimizer.hidden = true;
+            optimizer.removeAttribute("aria-busy");
+          }
+        }
       }),
-    ),
-    optimizer,
-  );
+    );
+  const cancelOptimizer = button("Cancel pack search", () => {
+    cancelOptimization();
+    optimizer.replaceChildren(node("p", "Pack search cancelled."));
+  });
+  cancelOptimizer.hidden = true;
+  optimizerActions.append(optimizeButton, cancelOptimizer);
+  plan.append(optimizerActions, optimizer);
+  window.addEventListener("parimere:erase-data", () => optimizerClient.dispose());
+  window.addEventListener("pagehide", () => optimizerClient.dispose());
   const money = (n) => format(n, api.currency(), preferences.locale),
     number = (n) => format(n, null, preferences.locale);
   const dialog = node("dialog", undefined, "transfer-dialog"),
@@ -455,15 +599,15 @@ export function createWorkspace(api) {
     dialogContent.append(
       pre,
       button(
-        importing ? "Accept imported comparison" : "Download this comparison",
-        safely(() => {
+        importing ? "Accept imported comparison" : isNative ? "Share this comparison" : "Download this comparison",
+        safely(async () => {
           if (importing) {
             remember();
             load(data);
             dialog.close();
             message("Imported locally. Nothing was sent to a household.");
           } else
-            download(
+            await saveFile(
               JSON.stringify(data, null, 2),
               "parimere-comparison.json",
               "application/json",
@@ -495,8 +639,8 @@ export function createWorkspace(api) {
     ),
     file,
     button(
-      "CSV report",
-      safely(() => {
+      isNative ? "Share CSV report" : "CSV report",
+      safely(async () => {
         const doc = current(),
           result = comparePlanned(doc.products, doc.currency, options),
           columns = [
@@ -531,7 +675,7 @@ export function createWorkspace(api) {
           result.plans[i].leftover,
           result.plans[i].days ?? "",
         ]);
-        download(
+        await saveFile(
           [columns, ...rows]
             .map((row) => row.map(csvCell).join(","))
             .join("\r\n"),
@@ -542,11 +686,11 @@ export function createWorkspace(api) {
     ),
     button(
       "Print report",
-      safely(() => {
+      safely(async () => {
         if (!lastResult)
           throw new Error("Complete the comparison before printing.");
         document.querySelector(".math").open = true;
-        window.print();
+        await printReport();
       }),
     ),
     button("Shopping mode", () => {
@@ -622,11 +766,13 @@ export function createWorkspace(api) {
   catalogPanel.append(
     node("summary", "Saved products, barcodes & price history"),
     barcode,
-    button("Find barcode", () => findBarcode(barcode.value)),
+    button("Find barcode", safely(() => findBarcode(barcode.value))),
     catalogList,
   );
   function findBarcode(value) {
-    const found = catalog.find((v) => v.product.barcode === value.trim());
+    const query = value.trim();
+    if (!query) throw new Error("Enter a barcode before searching saved products.");
+    const found = catalog.find((v) => v.product.barcode === query);
     if (found) {
       remember();
       api.add(found.product);
@@ -639,8 +785,8 @@ export function createWorkspace(api) {
   const photo = node("input");
   photo.type = "file";
   photo.accept = "image/png,image/jpeg,image/webp";
-  photo.setAttribute("capture", "environment");
-  photo.setAttribute("aria-label", "Capture barcode or receipt photo");
+  if (!isNative) photo.setAttribute("capture", "environment");
+  photo.setAttribute("aria-label", isNative ? "Choose barcode or receipt photo" : "Capture barcode or receipt photo");
   const photoMode = node("select");
   photoMode.add(new Option("Read price label / receipt", "ocr"));
   photoMode.add(new Option("Identify saved barcode", "barcode"));
@@ -648,21 +794,24 @@ export function createWorkspace(api) {
   photo.addEventListener(
     "change",
     safely(async () => {
-      const selected = photo.files[0];
+      const selected = photo.files[0], mode = photoMode.value;
       photo.value = "";
       if (!selected || busy) return;
       busy = true;
       photo.disabled = true;
+      photoMode.disabled = true;
       message("Reading this photo on your device…");
       try {
-        const result = await capturePhoto(selected, photoMode.value);
-        if (photoMode.value === "barcode") {
+        const result = await capturePhoto(selected, mode);
+        if (localDataErased()) return;
+        if (mode === "barcode") {
           barcode.value = result;
           findBarcode(result);
         } else showOCR(result);
       } finally {
         busy = false;
         photo.disabled = false;
+        photoMode.disabled = false;
       }
     }),
   );
@@ -824,10 +973,23 @@ export function createWorkspace(api) {
       "Use the same basket item key for matching needs at different stores. One offer per item key per store. Per-product shipping is replaced by one shared delivery fee; other per-offer costs repeat. Store fees and thresholds use the result currency. Minimums use discounted goods before tax, fees and deposits.",
     ),
     button("Edit store delivery settings", () => drawBasket()),
+    button("Reset saved delivery settings", safely(() => {
+      if (!storageWritable()) throw new Error("Use the tab that is saving your work to reset delivery settings.");
+      if (!confirm("Reset saved delivery settings? This clears only store delivery fees and thresholds. Download recovery data under Data on this device first if you want to keep the original values.")) return;
+      replaceLocalData("basket", { currency: api.currency(), stores: {} });
+      basketSettings = {};
+      basketCurrency = api.currency();
+      basketProtected = false;
+      drawBasket();
+      basketResult.replaceChildren();
+      showStorageIssues();
+      message("Saved delivery settings reset. Enter fees and thresholds in " + api.currency() + ".");
+    })),
     basketRows,
     button(
       "Compare store totals",
       safely(() => {
+        if (basketProtected) throw new Error("Recover or reset saved delivery settings before comparing store totals.");
         const totals = basketTotals(
           api.products(),
           api.currency(),
@@ -860,7 +1022,7 @@ export function createWorkspace(api) {
   function drawBasket() {
     basketRows.replaceChildren();
     for (const store of [
-      ...new Set(api.products().map((p) => p.store || "Unspecified store")),
+      ...new Set(api.products().map((p) => p.store?.trim() || "Unspecified store")),
     ]) {
       const row = node("fieldset");
       row.append(node("legend", store));
@@ -874,6 +1036,7 @@ export function createWorkspace(api) {
         input.type = "number";
         input.min = "0";
         input.step = "any";
+        input.disabled = basketProtected;
         input.value = basketSettings[store]?.[key] || "";
         input.addEventListener(
           "change",
@@ -882,7 +1045,8 @@ export function createWorkspace(api) {
               ...basketSettings,
               [store]: { ...basketSettings[store], [key]: input.value },
             };
-            writeLocal("basket", basketSettings);
+            writeLocal("basket", { currency: api.currency(), stores: basketSettings });
+            basketCurrency = api.currency();
             basketResult.replaceChildren();
           }),
         );
@@ -927,15 +1091,51 @@ export function createWorkspace(api) {
     toolbar,
     tools,
   );
+  const dataSettings = node("details", undefined, "workspace-panel");
+  window.addEventListener("parimere:data-erased", ({ detail: failures }) => {
+    const screen = node("main", undefined, "shell data-reset"),
+      restart = node("a", "Open Parimere again");
+    screen.id = "data-reset";
+    restart.href = "/";
+    screen.append(
+      node("h1", failures.length ? "Some local data could not be deleted" : "Local data deleted"),
+      node("p", failures.length
+        ? "Your browser blocked removal of " + failures.join(", ") + ". Remove this site's stored data in browser settings to finish."
+        : "Saved comparisons, catalog history, preferences and local access have been removed. Downloaded exports and shared server copies are unchanged."),
+      node("p", isNative ? "Open Parimere again to start a new comparison." : "Reconnect before reopening so Parimere can download its offline files again."),
+      restart,
+    );
+    document.body.replaceChildren(screen);
+    screen.tabIndex = -1;
+    screen.focus();
+  });
+  dataSettings.append(
+    node("summary", "Data on this device"),
+    node("p", "Delete local comparisons, saved comparisons, catalog history, scenarios, preferences, exchange rates, household access on this device and offline files. Downloaded or shared copies stay with their recipients. To delete a shared household, use its owner controls before deleting your local access."),
+    button("Download recovery data", safely(async () => {
+      const data = {};
+      for (const key of ["current", "saved", "catalog", "scenario", "preferences", "basket"])
+        data[key] = localStorage.getItem("parimere:" + key);
+      await saveFile(JSON.stringify({ format: "parimere-raw-recovery", version: 1, data }, null, 2),
+        "parimere-recovery.json", "application/json");
+      message("Recovery file exported. It contains raw saved data and may include product notes. Keep it private; it is not a comparison import file.");
+    })),
+    button("Delete all local data", safely(async () => {
+      if (!storageWritable()) throw new Error("Use the tab that is saving your work to delete local data.");
+      if (!confirm("Permanently delete all Parimere data stored on this device? This includes saved comparisons, catalog history and household access. This cannot be undone. Downloaded files and server copies are not deleted.")) return;
+      await clearNativeFiles();
+      await eraseLocalData();
+    })),
+  );
   host.append(
-    status,
     transfers,
     plan,
     scenarioPanel,
     catalogPanel,
     basket,
     prefs,
-    householdPanel({
+    dataSettings,
+    ...(!isNative ? [householdPanel({
       current,
       load,
       remember,
@@ -944,11 +1144,12 @@ export function createWorkspace(api) {
         sharedPreview = documentData(value);
         preview(sharedPreview, true);
       },
-    }),
+    })] : []),
   );
-  document.querySelector(".math").after(host);
-  const quick = node("div", undefined, "workspace-toolbar quick-tools");
-  quick.append(
+  document.querySelector(".comparison-layout").after(host);
+  host.before(status);
+  const shortcuts = node("div", undefined, "workspace-toolbar tool-shortcuts");
+  shortcuts.append(
     button("Save / open", () => {
       transfers.open = true;
       transfers.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -957,12 +1158,23 @@ export function createWorkspace(api) {
       plan.open = true;
       plan.scrollIntoView({ behavior: "smooth", block: "start" });
     }),
-    button("Undo", () => undo.click()),
     button("Shopping mode", () => document.body.classList.toggle("shopping")),
   );
-  document.querySelector("#compare-form").before(quick);
+  workspaceSummary.after(shortcuts);
+  const quick = node("div", undefined, "quick-tools");
+  const quickUndo = button("Undo", () => undo.click());
+  quickUndo.hidden = true;
+  quick.append(quickUndo);
+  document.querySelector(".actions").append(quick);
   refreshSaved();
   drawCatalog();
+  showStorageIssues();
+  if (legacyBasket) message("Old delivery settings have been preserved. Download recovery data, then use Reset saved delivery settings in the Whole-store basket panel.");
+  if (!storageWritable()) {
+    const mutating = new Set(["Save comparison", "Rename saved", "Delete saved", "Remove catalog entry", "Record price", "Capture original scenario", "Save current regional preferences", "Delete all local data", "Reset saved delivery settings"]);
+    for (const control of host.querySelectorAll("button"))
+      if (mutating.has(control.textContent)) control.disabled = true;
+  }
   return {
     initial,
     preferences,
@@ -972,6 +1184,11 @@ export function createWorkspace(api) {
     load,
     persist,
     message,
+    currencyChanged: changeCurrency,
+    invalidateOptimization() {
+      cancelOptimization();
+      optimizer.replaceChildren();
+    },
     initialize() {
       if (initial) load(initial);
       else if (preferences.currency) {
@@ -1037,6 +1254,8 @@ export function createWorkspace(api) {
           safely(() => saveCatalog(api.read(card))),
         ),
       );
+      if (!storageWritable())
+        [...tools.querySelectorAll("button")].find((control) => control.textContent === "Record price").disabled = true;
       for (const input of Object.values(card.inputs))
         if (input.type === "number") {
           input.enterKeyHint = "next";
@@ -1056,7 +1275,13 @@ export function createWorkspace(api) {
         }
     },
     result(result) {
+      cancelOptimization();
       lastResult = result;
+      const active = [];
+      if (options.target || options.budget || options.usage) active.push("purchase plan active");
+      if (Number(options.basis) > 0) active.push("custom comparison amount");
+      if (options.rank === "net") active.push("after refunds");
+      activePlan.textContent = active.length ? " · " + active.join(", ") : "";
       optimizer.replaceChildren();
       basketResult.replaceChildren();
       report.replaceChildren();
