@@ -9,7 +9,9 @@ export function householdPanel(api) {
     result = node("div");
   let session = null,
     state = null,
-    pending = false;
+    pending = false,
+    membershipEpoch = 0;
+  const shareDialogs = new Set();
   try {
     const value = JSON.parse(sessionStorage.getItem("parimere:membership"));
     if (
@@ -62,6 +64,7 @@ export function householdPanel(api) {
   };
   async function request(path, method = "GET", body) {
     const requestedSession = session,
+      requestedEpoch = membershipEpoch,
       controller = new AbortController(),
       timeout = setTimeout(() => controller.abort(), 10000);
     try {
@@ -99,7 +102,7 @@ export function householdPanel(api) {
         at += p.length;
       }
       const data = JSON.parse(new TextDecoder().decode(all));
-      if (requestedSession !== session)
+      if (requestedSession !== session || requestedEpoch !== membershipEpoch)
         throw new Error("Membership changed. Reload the shared revision.");
       if (!response.ok) {
         if (response.status === 401) {
@@ -183,7 +186,11 @@ export function householdPanel(api) {
             );
           }),
         );
-        dialog.addEventListener("close", () => dialog.remove());
+        shareDialogs.add(dialog);
+        dialog.addEventListener("close", () => {
+          shareDialogs.delete(dialog);
+          dialog.remove();
+        });
         document.body.append(dialog);
         dialog.showModal();
       }),
@@ -272,9 +279,11 @@ export function householdPanel(api) {
     const file = recovery.files[0];
     recovery.value = "";
     if (!file || pending) return;
+    const requestedEpoch = membershipEpoch;
     try {
       if (file.size > 2048) throw new Error("Invalid access key file.");
       const key = JSON.parse(await file.text());
+      if (requestedEpoch !== membershipEpoch) return;
       if (
         key.schemaVersion !== 1 ||
         key.origin !== location.origin ||
@@ -358,6 +367,24 @@ export function householdPanel(api) {
       );
     }),
   );
+  window.addEventListener("parimere:erase-data", () => {
+    membershipEpoch++;
+    session = null;
+    state = null;
+    try {
+      sessionStorage.removeItem("parimere:membership");
+    } catch {}
+    memberName.value = "";
+    houseName.value = "";
+    invite.value = "";
+    recovery.value = "";
+    for (const dialog of shareDialogs) {
+      dialog.close();
+      dialog.remove();
+    }
+    shareDialogs.clear();
+    draw();
+  });
   draw();
   return root;
 }

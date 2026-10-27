@@ -29,13 +29,63 @@ export const PRODUCT_FIELDS = [
   "targetPrice",
 ];
 const dangerous = new Set(["__proto__", "prototype", "constructor"]);
-export function safeJSON(text, max = 250000) {
+const localSnapshots = new Map(), localIssues = new Map();
+const LOCAL_BYTES = 2000000, LOCAL_NODES = 120000;
+let writable = true;
+let erased = false;
+let erasure;
+export const localDataErased = () => erased;
+export const storageWritable = () => writable && !erased;
+export const setStorageWritable = (value) => { writable = value === true; };
+export const storageIssues = () => [...localIssues.values()].map((issue) => ({ ...issue }));
+export function eraseLocalData(broadcast = true) {
+  if (erasure) return erasure;
+  // Stop late FX responses and unload handlers from recreating erased data.
+  erased = true;
+  globalThis.dispatchEvent?.(new Event("parimere:erase-data"));
+  erasure = (async () => {
+    const failures = [];
+    if (broadcast) {
+      try {
+        // Other open tabs must also discard their in-memory state and membership.
+        localStorage.setItem("parimere:erase-request", String(Date.now()));
+      } catch {}
+    }
+    for (const name of ["localStorage", "sessionStorage"]) {
+      try {
+        const storage = globalThis[name];
+        for (let i = storage.length - 1; i >= 0; i--) {
+          const key = storage.key(i);
+          if (key?.startsWith("parimere:")) storage.removeItem(key);
+        }
+      } catch {
+        failures.push(name === "localStorage" ? "saved data" : "session data");
+      }
+    }
+    if (globalThis.caches) {
+      try {
+        const names = await caches.keys();
+        await Promise.all(names.filter((name) => name.startsWith("parimere-"))
+          .map((name) => caches.delete(name)));
+      } catch {
+        failures.push("offline files");
+      }
+    }
+    globalThis.dispatchEvent?.(new CustomEvent("parimere:data-erased", { detail: failures }));
+    return failures;
+  })();
+  return erasure;
+}
+globalThis.addEventListener?.("storage", (event) => {
+  if (event.key === "parimere:erase-request" && event.newValue) void eraseLocalData(false);
+});
+function boundedJSON(text, max, maxNodes) {
   if (typeof text !== "string" || new TextEncoder().encode(text).length > max)
     throw new Error("This file exceeds the size limit.");
   const value = JSON.parse(text);
   let count = 0;
   function visit(v, depth) {
-    if (++count > 12000 || depth > 16)
+    if (++count > maxNodes || depth > 16)
       throw new Error("Data nesting exceeds the limit.");
     if (v && typeof v === "object")
       for (const [k, item] of Object.entries(v)) {
@@ -45,6 +95,9 @@ export function safeJSON(text, max = 250000) {
   }
   visit(value, 0);
   return value;
+}
+export function safeJSON(text, max = 250000) {
+  return boundedJSON(text, max, 12000);
 }
 export function documentData(value) {
   if (
@@ -104,23 +157,81 @@ export function documentData(value) {
   };
 }
 export function readLocal(key, fallback) {
+  let text;
   try {
-    const value = localStorage.getItem("parimere:" + key);
-    return value ? safeJSON(value, 2000000) : fallback;
+    text = localStorage.getItem("parimere:" + key);
   } catch {
+    localSnapshots.set(key, { blocked: true });
+    localIssue(key, "unavailable", "Local storage is unavailable. Existing data has not been changed.");
+    return fallback;
+  }
+  try {
+    const value = text === null ? fallback : boundedJSON(text, LOCAL_BYTES, LOCAL_NODES);
+    localSnapshots.set(key, { text, blocked: false });
+    localIssues.delete(key);
+    return value;
+  } catch {
+    localSnapshots.set(key, { text, blocked: true });
+    localIssue(key, "unreadable", "Stored " + key + " data could not be read. It has been kept and will not be overwritten. Recover it or remove this site's stored data before saving again.");
     return fallback;
   }
 }
+function localIssue(key, kind, message) {
+  localIssues.set(key, { key, kind, message });
+  const error = new Error(message);
+  error.code = "PARIMERE_STORAGE_" + kind.toUpperCase();
+  return error;
+}
+export function protectLocalData(key, message) {
+  const snapshot = localSnapshots.get(key) || {};
+  localSnapshots.set(key, { ...snapshot, blocked: true });
+  return localIssue(key, "unreadable", message);
+}
 export function writeLocal(key, value) {
+  return writeLocalValue(key, value, false);
+}
+export function replaceLocalData(key, value) {
+  return writeLocalValue(key, value, true);
+}
+function writeLocalValue(key, value, replaceUnreadable) {
+  if (erased) return;
+  if (!writable) {
+    const error = new Error("This tab is read-only. Use the editing tab to save changes.");
+    error.code = "PARIMERE_STORAGE_READONLY";
+    throw error;
+  }
+  if (replaceUnreadable && !localSnapshots.has(key))
+    throw localIssue(key, "unavailable", "Load saved data before resetting it so changes from another tab can be checked.");
+  if (!localSnapshots.has(key)) readLocal(key, null);
+  const snapshot = localSnapshots.get(key);
+  if (snapshot.blocked && !(replaceUnreadable && Object.hasOwn(snapshot, "text"))) {
+    const issue = localIssues.get(key);
+    throw localIssue(key, issue.kind, issue.message);
+  }
+  let previous;
   try {
-    const text = JSON.stringify(value);
-    if (new TextEncoder().encode(text).length > 2000000) throw new Error();
+    previous = localStorage.getItem("parimere:" + key);
+  } catch {
+    throw localIssue(key, "unavailable", "Local storage is unavailable. Export your comparison before closing.");
+  }
+  if (previous !== snapshot.text)
+    throw localIssue(key, "conflict", "Stored " + key + " data changed in another tab. Your changes have not overwritten it. Export this comparison, then reload to use the latest saved data.");
+  let text;
+  try {
+    text = JSON.stringify(value);
+    boundedJSON(text, LOCAL_BYTES, LOCAL_NODES);
+  } catch {
+    const error = new Error("This data exceeds local storage limits or contains unsupported values. Existing data has not been changed.");
+    error.code = "PARIMERE_STORAGE_INVALID";
+    throw error;
+  }
+  try {
     localStorage.setItem("parimere:" + key, text);
   } catch {
-    throw new Error(
-      "Local storage is full or unavailable. Export your comparison before closing.",
-    );
+    throw localIssue(key, "unavailable", "Local storage is full or unavailable. Export your comparison before closing.");
   }
+  localSnapshots.set(key, { text, blocked: false });
+  localIssues.delete(key);
 }
 export function csvCell(value) {
   const text = String(value ?? "");
