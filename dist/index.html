@@ -69,6 +69,13 @@
         >
       </header>
       <main>
+        <details class="exchange-panel" id="exchange-panel" hidden>
+          <summary>Exchange rates <span id="exchange-base"></span></summary>
+          <p>Rates in your results currency, initially based on your device region. Change “Results in” above to choose another currency.</p>
+          <div id="exchange-rates" class="exchange-rates" aria-live="polite"></div>
+          <p>Daily reference rates from Frankfurter. Your bank or payment provider may use a different rate or charge fees.</p>
+          <button type="button" id="exchange-refresh">Refresh rates</button>
+        </details>
         <section id="storage-notice" class="storage-notice" role="status" hidden>
           <p></p>
         </section>

@@ -105,12 +105,14 @@ button:active {
 }
 header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 20px;
   align-items: center;
 }
 .wordmark {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 10px;
   font-size: 17px;
@@ -873,4 +875,20 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .maker-sunaissu { display: block; width: 100px; height: 30px; object-fit: contain; }
 .maker-bg { display: block; width: 24px; height: 12px; object-fit: contain; opacity: .65; }
 footer { flex-wrap: wrap; align-items: center; }
+.exchange-panel { margin: 24px 0; padding: 16px; border: 1px solid #dce2ee; border-radius: 16px; background: #fff; }
+.exchange-panel[hidden] { display: none; }
+.exchange-panel > summary { font-weight: 700; }
+.exchange-panel > summary span { color: #556075; font-weight: 400; }
+.exchange-panel p { font-size: 13px; color: #556075; }
+.exchange-rates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.exchange-rate { padding: 12px; border-radius: 10px; background: #f4f6fb; overflow-wrap: anywhere; }
+.exchange-rate strong, .exchange-rate small { display: block; }
+.exchange-rate small { margin-top: 4px; color: #556075; }
+.exchange-panel button { padding: 8px 16px; border: 1px solid #cbd4e5; border-radius: 10px; background: white; color: #2349ec; }
+@media (max-width: 420px) {
+  header { gap: 12px; }
+  header .currency { margin-left: auto; flex-wrap: nowrap; }
+  .exchange-rates { grid-template-columns: minmax(0, 1fr); }
+}
+@media print { .exchange-panel { display: none; } }
 @media (max-width: 650px) { footer { align-items: flex-start; gap: 10px; } }

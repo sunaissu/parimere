@@ -317,6 +317,44 @@ async function optimizationAndLayouts(browser) {
   console.log("Passed: real worker result, cancellation, edit invalidation and 320/390/1440px interactions/layout.");
 }
 
+async function exchangeRates(browser) {
+  const context = await contextFor(browser);
+  try {
+    let fail = false;
+    let requests = 0;
+    await context.route("https://api.frankfurter.dev/**", async route => {
+      requests++;
+      const parts = new URL(route.request().url()).pathname.split("/");
+      if (fail) return route.fulfill({ status: 503, body: "Unavailable" });
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify({
+        base: parts.at(-2), quote: parts.at(-1), rate: 58.25,
+        date: new Date().toISOString().slice(0, 10),
+      }) });
+    });
+    const page = await openPage(context);
+    await expect(page.locator("#currency")).toHaveValue("PHP");
+    assert.equal(requests, 0, "Collapsed rates must not request network data");
+    await page.locator("#exchange-panel > summary").click();
+    await expect(page.locator("#exchange-rates strong")).toHaveCount(4);
+    await expect(page.locator("#exchange-rates")).toContainText("1 USD = 58.25 PHP");
+    fail = true;
+    await page.locator("#exchange-refresh").click();
+    await expect(page.locator("#exchange-rates")).toContainText("unavailable. Refresh to retry.");
+    fail = false;
+    await page.locator("#exchange-refresh").click();
+    await expect(page.locator("#exchange-rates strong")).toHaveCount(4);
+    await page.locator("#currency").selectOption("EUR");
+    await expect(page.locator("#exchange-rates")).toContainText("1 USD = 58.25 EUR");
+    await expect(page.locator("#exchange-base")).toHaveText("in EUR");
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      await page.screenshot({ path: path.join(output, "exchange-" + width + ".png") });
+    }
+  } finally { await context.close(); }
+  console.log("Passed: regional exchange rates, lazy requests, failure/retry, currency changes and responsive layout.");
+}
+
 (async () => {
   const server = spawn(process.execPath, ["serve.mjs"], {
     cwd: root, env: { ...process.env, PORT: String(port), PARIMERE_ORIGIN: url, PARIMERE_SYNC: "0", PARIMERE_TRUST_PROXY: "0" },
@@ -340,6 +378,7 @@ async function optimizationAndLayouts(browser) {
     await recoverDeliverySettings(browser);
     await currencyBoundaries(browser);
     await optimizationAndLayouts(browser);
+    await exchangeRates(browser);
     assert.deepEqual(errors, [], "No unhandled browser errors are permitted.");
     console.log("Release-fix browser regressions passed. No household service or user browser data was used.");
   } finally {

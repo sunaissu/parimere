@@ -89,12 +89,12 @@ try {
         rateCache.set(pair, value);
 } catch {}
 const rateRequests = new Map();
-async function fetchRate(source, base) {
+async function fetchRate(source, base, refresh = false) {
   if (isNative) throw new Error("Enter an exchange rate for this offline Android app.");
   const pair = source + "/" + base;
   const cached = rateCache.get(pair);
   if (
-    cached &&
+    !refresh && cached &&
     cached.fetchedAt <= Date.now() &&
     Date.now() - cached.fetchedAt < 3600000 &&
     Date.now() - Date.parse(cached.date + "T00:00:00Z") <= 7 * 86400000
@@ -373,6 +373,7 @@ function empty(unit = "ml") {
 }
 function render() {
   if (localDataErased()) return;
+  renderExchangePanel();
   clearTimeout(timer);
   $("verdict").setAttribute("aria-busy", "false");
   cards.forEach((card, i) => {
@@ -696,6 +697,43 @@ $("reset").addEventListener("click", () => {
   fill([empty(), empty()]);
   cards[0].inputs.price.focus();
 });
+let exchangeBase = "", exchangeRequest = 0;
+const exchangePanel = $("exchange-panel");
+exchangePanel.hidden = isNative;
+async function renderExchangePanel(refresh = false) {
+  if (isNative || localDataErased()) return;
+  const base = $("currency").value;
+  $("exchange-base").textContent = "in " + base;
+  if (!exchangePanel.open || (!refresh && exchangeBase === base)) return;
+  exchangeBase = base;
+  const request = ++exchangeRequest;
+  const container = $("exchange-rates");
+  container.replaceChildren();
+  container.setAttribute("aria-busy", "true");
+  const sources = ["USD", "EUR", "GBP", "JPY", "PHP"].filter(code => code !== base).slice(0, 4);
+  await Promise.all(sources.map(async source => {
+    const row = document.createElement("div");
+    row.className = "exchange-rate";
+    row.textContent = "1 " + source + " · Loading…";
+    container.append(row);
+    try {
+      const data = await fetchRate(source, base, refresh);
+      if (request !== exchangeRequest || localDataErased()) return;
+      const value = new Intl.NumberFormat(undefined, { maximumSignificantDigits: 7 }).format(Number(data.rate));
+      const amount = document.createElement("strong");
+      amount.textContent = "1 " + source + " = " + value + " " + base;
+      const date = document.createElement("small");
+      date.textContent = "As of " + data.date;
+      row.replaceChildren(amount, date);
+    } catch {
+      if (request !== exchangeRequest || localDataErased()) return;
+      row.textContent = source + " → " + base + ": unavailable. Refresh to retry.";
+    }
+  }));
+  if (request === exchangeRequest) container.setAttribute("aria-busy", "false");
+}
+exchangePanel.addEventListener("toggle", () => renderExchangePanel());
+$("exchange-refresh").addEventListener("click", () => renderExchangePanel(true));
 let workspace;
 workspace = createWorkspace({
   currency: () => $("currency").value,
