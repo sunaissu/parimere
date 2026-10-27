@@ -245,22 +245,6 @@ h1 span {
 .product-b {
   border-top: 3px solid #ed8255;
 }
-.versus {
-  position: absolute;
-  z-index: 2;
-  top: 46%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(-8deg);
-  width: 48px;
-  height: 48px;
-  display: grid;
-  place-items: center;
-  border: 2px solid #182236;
-  background: #dfff70;
-  border-radius: 50%;
-  font-size: 14px;
-  font-weight: 900;
-}
 .field {
   margin-bottom: 15px;
   min-width: 0;
@@ -499,14 +483,6 @@ footer {
   }
   .product {
     padding: 21px;
-  }
-  .versus {
-    top: 50%;
-    left: auto;
-    right: 16px;
-    transform: translateY(-50%) rotate(-8deg);
-    width: 40px;
-    height: 40px;
   }
   .verdict {
     padding: 21px;
