@@ -877,7 +877,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 
 .maker-credit { display: inline-flex; align-items: center; gap: 12px; color: #667085; font-size: 12px; flex-shrink: 0; }
 .maker-sunaissu { display: block; width: 100px; height: 30px; object-fit: contain; }
-.maker-bg { display: block; width: 28px; height: 16px; object-fit: contain; }
 footer { flex-wrap: wrap; align-items: center; }
 .exchange-panel { margin: 24px 0; padding: 16px; border: 1px solid #dce2ee; border-radius: 16px; background: #fff; }
 .exchange-panel[hidden] { display: none; }
