@@ -1,0 +1,17 @@
+{
+  "publisherName": "",
+  "publisherType": "personal",
+  "requestedDeveloperName": "sunaissu",
+  "supportEmail": "",
+  "privacyPolicyUrl": "",
+  "applicationIdApproved": false,
+  "privacyPolicyFinalized": false,
+  "brandReviewCompleted": false,
+  "assetRightsConfirmed": false,
+  "distributionCountries": [],
+  "requestedDistribution": "all_available_countries",
+  "targetAudience": "",
+  "requestedAudience": "Broad general availability; store target age groups still need review.",
+  "primaryTestDevice": "Samsung Galaxy S25 Ultra",
+  "notes": "Fill these public release details after choosing the publishing identity. Never put signing passwords or private account data here."
+}

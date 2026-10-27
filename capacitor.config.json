@@ -1,0 +1,8 @@
+{
+  "appId": "app.parimere.mobile",
+  "appName": "Parimere",
+  "webDir": "mobile-dist",
+  "server": { "androidScheme": "https", "cleartext": false, "errorPath": "webview-update.html" },
+  "android": { "allowMixedContent": false, "webContentsDebuggingEnabled": false, "minWebViewVersion": 120 },
+  "plugins": { "CapacitorHttp": { "enabled": false } }
+}

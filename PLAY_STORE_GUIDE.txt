@@ -1,0 +1,241 @@
+Parimere: Google Play account and release guide
+Official requirements checked on 2026-10-21.
+
+October 22: the implementation-specific scope below describes the retained
+Capacitor wrapper. New React Native development is in ../parimere-mobile.
+Use that folder's README.txt and actual signed build when preparing its listing
+and declarations; its first version does not include OCR, scanning or printing.
+
+Parimere is being prepared as a web app and an Android phone app. This guide
+explains how to create the publishing account and what must be finished before
+a Play release. It does not certify a build, create an account, or publish an app.
+
+Current release scope and open items
+
+The Android release being prepared bundles the interface and calculation code
+locally using Capacitor. Its intended scope includes offline comparisons, saved
+comparisons, selected-photo OCR/barcodes, manual exchange rates, file exports
+and sharing, and deletion of local app data. Household sharing, automatic rate
+requests, ads, billing and subscriptions are excluded from this first native
+build. The web app retains its existing web features. Optional Android ads
+remain a future decision recorded in ANDROID_RELEASE.txt.
+
+Treat that scope as the release specification. Verify it against the final
+signed build and its network traffic before answering Play Console forms.
+An Android project or a successful web test does not establish that Android
+compilation, installation, camera/file access or store review has passed.
+
+The following information and evidence are still needed:
+
+[ ] Publisher's legal name or organization, and correct account type.
+[ ] Public developer name, support email and privacy contact.
+[ ] Permanent Android application ID, confirmed before the first upload.
+[ ] Initial distribution countries and intended audience age groups.
+[ ] Public HTTPS website and final privacy-policy URL.
+[ ] Actual host/provider logging, retention and deletion information.
+[ ] Android toolchain, successful release build and protected signing keys.
+[ ] Tests on physical Android devices and the Play-delivered build.
+[ ] Store screenshots, graphics, completed declarations and review access.
+[ ] Verified developer account and any required closed-test evidence.
+
+Any privacy page supplied with the project is a draft until the publishing
+identity, contact details and deployed services are completed and reviewed.
+Do not submit placeholder URLs or identify that draft as an approved policy.
+
+1. Create the developer account
+
+Use the Google account that should own Parimere long term. Keep its recovery
+details current and enable two-step verification. Open:
+https://play.google.com/console/signup
+
+The account owner must be at least 18. Read and accept the Developer
+Distribution Agreement and pay the US$25 one-time registration fee. Google
+lists accepted credit/debit cards; availability varies by location and prepaid
+cards are not accepted. Complete payment and identity steps yourself in the
+Google interface. Never put identity documents or card details in the repo.
+https://support.google.com/googleplay/android-developer/answer/6112435
+
+Choose Personal if publishing as yourself. Choose Organization if the publisher
+is an actual organization. Organizations generally need a D-U-N-S number,
+organization details and a website. Google says applying for a D-U-N-S number
+through Dun & Bradstreet is free and can take up to 30 days. Google documents
+limited alternatives for organizations unable to obtain one.
+https://support.google.com/googleplay/android-developer/answer/13634885
+https://support.google.com/googleplay/android-developer/answer/13628312
+
+Provide your real legal name/address and reachable email/phone details. Finish
+the identity and one-time-password checks shown in Console. Personal accounts
+publicly display the legal name, country and developer email. Monetization and
+regional requirements can make additional details public. Organization accounts
+display their legal name/address and developer email/phone. Check what the
+actual registration screen says will be public before completing it.
+https://support.google.com/googleplay/android-developer/answer/13628312
+
+New personal accounts must also verify access to a non-rooted physical Android
+device running Android 10 or later. As account owner, open the device task on
+the Play Console Home page, scan its QR code, sign into the Play Console mobile
+app with the same account, and follow Verify. An emulator cannot satisfy this.
+https://support.google.com/googleplay/android-developer/answer/14316361
+
+2. Create Parimere's app entry
+
+In Play Console, choose Home > Create app. Enter Parimere, select the default
+language, choose App, set it to Free, and enter the support email. Complete the
+policy/export declarations and Play App Signing terms shown there. Follow the
+app Dashboard for the remaining setup tasks.
+
+Choose the permanent package/application ID before the first bundle upload.
+Package names are unique and cannot later be deleted and reused. A temporary
+development ID must not accidentally become the public package identity.
+https://support.google.com/googleplay/android-developer/answer/9859152
+
+3. Prepare the Android release
+
+Install the Android Studio/JDK/SDK versions required by the project's pinned
+Capacitor version. Prepare and sync the native web assets using the repository's
+Android instructions, then open the android project in Android Studio. Build a
+debug version for device checks first. A missing local toolchain leaves native
+compilation and device behavior unverified even if web tests pass.
+
+For the Play release, generate a signed Android App Bundle, ending in .aab.
+New Google Play apps must use this format. Use Play App Signing and retain a
+protected backup of the upload key and its recovery information outside Git.
+Give each subsequent upload a larger versionCode. Keep release builds separate
+from debug builds and confirm the app name, package ID and version in the final
+artifact.
+https://developer.android.com/guide/app-bundle
+https://support.google.com/googleplay/android-developer/answer/9859152
+
+Current phone-app submissions must target Android 16, API level 36, or higher.
+This requirement took effect on August 31, 2026. A lower minimum supported
+Android version is a separate setting and does not replace targetSdkVersion.
+Check the merged release manifest and the bundle, not only a source setting.
+https://developer.android.com/google/play/requirements/target-sdk
+
+The official 16 KB page-size guidance currently says apps targeting API 35+
+must support 16 KB pages on 64-bit devices, and that updates without support
+cannot be released starting February 1, 2027. Check Console's current messages
+before release because this schedule can change. Apps using only Java/Kotlin
+and such libraries already support 16 KB, but inspect the final artifact for
+native .so libraries introduced by dependencies and test a 16 KB environment.
+JavaScript/Wasm OCR assets alone are not evidence of an Android native .so
+dependency. Inspect the built APK/AAB to establish what is actually packaged.
+https://developer.android.com/guide/practices/page-sizes
+
+Check the merged manifest for permissions from every dependency. Occasional
+receipt/label selection should use a system picker. Broad READ_MEDIA_IMAGES or
+READ_MEDIA_VIDEO access is restricted to cases where a picker cannot provide
+core functionality. Test cancellation, denied access and unavailable handlers.
+https://support.google.com/googleplay/android-developer/answer/16935362
+
+4. Finish privacy and app-content declarations
+
+Publish a final privacy-policy webpage on an active, public, non-geofenced URL
+and link it in Console and inside the app. Google requires it even if the app
+does not collect personal data. It must name Parimere or the listed developer,
+give a privacy contact, explain data access/use/recipients and security, and
+state retention/deletion practices. Use an ordinary non-editable webpage,
+not a PDF or a document that visitors can edit.
+https://support.google.com/googleplay/android-developer/answer/10144311
+
+Complete Data safety against the actual Android release. Include behavior from
+the WebView and all plugins/SDKs. Purely local processing is excluded from
+collection, while off-device transfers require assessment. User-initiated file
+sharing has specific exceptions; review the definitions before answering.
+Audit startup, offline work, photo reading, imports, exports and sharing using
+the signed build. Check Android backup/restore as well. Do not copy answers
+from the web version, whose automatic FX and optional household data flows
+differ. Closed, open and production tracks require this form; apps exclusively
+on internal testing are exempt from the Data safety section.
+https://support.google.com/googleplay/android-developer/answer/10787469
+
+For the proposed native scope, there is no account creation. Confirm this in
+the release build before answering account-deletion questions. Local erasure
+must remove saved comparisons, catalog/history, preferences, cached app data
+and any app-managed temporary exports it promises to remove. Files users saved
+or shared outside Parimere remain under their control and should be described
+that way. If online household identities or other accounts are added later,
+review the account rule again. Apps offering account creation need an in-app
+deletion path and a web deletion-request resource, covering associated data.
+https://support.google.com/googleplay/android-developer/answer/13327111
+
+Complete every relevant App content task in Console:
+
+- Ads: answer from the shipped build. The initial native scope has none.
+  Optional ads would still require a Contains ads declaration if added later.
+- App access: state whether reviewers need credentials or special steps.
+  Describe how to reach file import, OCR and other features they should test.
+- Target audience: choose the actual intended age groups. Including children
+  brings Families requirements; do not choose an audience to bypass a policy.
+- Content rating: complete the questionnaire for the actual functionality.
+- Permissions and other declarations: finish all tasks Console shows.
+https://support.google.com/googleplay/android-developer/answer/9859455
+
+Complete Financial features too. Google requires this declaration even when
+an app has no financial features. Parimere compares entered shopping prices;
+currency display alone does not establish banking, lending or financial advice.
+Review the form's definitions and select the answer matching the shipped app.
+https://support.google.com/googleplay/android-developer/answer/13849271
+
+5. Prepare the store listing
+
+Keep claims specific to the shipped Android build. Describe comparison of
+entered prices, quantities and offers. Do not promise live product prices,
+guaranteed savings, automatic rates or household sync when they are absent.
+Only advertise scanning and offline behavior after testing them on Android.
+
+Prepare these assets:
+
+- App name: maximum 30 characters. Parimere fits.
+- Short description: maximum 80 characters.
+- Full description: maximum 4,000 characters.
+- Support email, category and the final privacy-policy URL.
+https://support.google.com/googleplay/android-developer/answer/9859152
+
+- Store icon: 512 x 512 pixels, following Google's icon format requirements.
+- Feature graphic: 1024 x 500 pixels, JPEG or 24-bit PNG without transparency.
+- At least two actual screenshots meeting the supported dimensions. Google
+  specifies 320-3840 pixels and a maximum side no more than twice the minimum.
+  Four phone screenshots at 1080 x 1920 are a useful target and meet Google's
+  additional screenshot guidance for recommendation formats.
+
+Capture the actual Android UI. Include comparison entry/results, saved work,
+and planning or capture only when those functions are present and verified.
+The web manifest icon and desktop screenshots are not sufficient store assets.
+https://support.google.com/googleplay/android-developer/answer/9866151
+
+6. Test, fix issues and apply for production
+
+Start with internal testing in Play Console. Add your own Google account and
+trusted testers, upload the signed AAB, install through the tester link, and
+exercise the Play-delivered version. Internal testing has no 12-person or
+14-day prerequisite, but it does not count as the required closed test.
+
+Personal developer accounts created after November 13, 2023 must then run a
+closed test with at least 12 testers opted in continuously for at least 14
+days. The minimum must still be met when applying for production access.
+Complete app setup before starting that closed test. Recruit people who will
+use Parimere's workflows, keep feedback and record what was fixed. Apply from
+the Dashboard when eligible and answer the questions about testing and release
+readiness. Meeting the numbers allows an application; it does not guarantee
+production approval. Check the requirements shown for your actual account.
+https://support.google.com/googleplay/android-developer/answer/14151465
+
+Keep a test record for the exact version being uploaded:
+
+[ ] Correct units, discounts, costs, rankings, ties and target quantities.
+[ ] Clean install and upgrade without losing saved comparisons.
+[ ] Offline launch and calculations, including local capture if advertised.
+[ ] Save/reload, import/export/share and full local-data deletion.
+[ ] Android Back, keyboard, rotation and background/restart behavior.
+[ ] Small phones, large text, screen-reader labels and visible controls.
+[ ] Camera/file selection, cancellation, denial and OCR/barcode failure cases.
+[ ] No unexpected requests, SDK data flows or unneeded permissions.
+[ ] No crashes or blocking issues in Play's pre-launch report and tester use.
+[ ] Accurate screenshots, listing, privacy policy and Console declarations.
+
+Fix reported issues, retest the affected workflows and retain the results.
+Before submitting, confirm all pending account/Console tasks and review the
+latest official requirements linked above. Keep the public web service and
+privacy URL working throughout review. Google decides production access and
+app approval; repository checks cannot establish either result.

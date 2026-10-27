@@ -1,0 +1,230 @@
+PARIMERE: WEB AND ANDROID RELEASE PLAN
+Reviewed 2026-10-21. Planning document, not a privacy policy or legal opinion.
+
+October 22: the Capacitor scope below is the earlier plan. The separate
+../parimere-mobile React Native app now has its own feature scope and release
+checklist in README.txt. See RELEASE.txt here for the latest web review.
+
+AGREED PRODUCT DIRECTION
+
+Keep a web app and create an Android app. Both are free to use, without paid
+features, subscriptions or a billing SDK. The web app stays ad-free, with no
+ad prompts or advertising SDK. Optional ads are planned for Android only.
+Core comparison should work without an account, and all comparison features
+remain available when users decline ads or turn ad offers off.
+Developer registration, hosting, support and maintenance can still cost money.
+
+The desktop layout shows results beside the inputs. Browser checks cover
+laptop and mobile layouts, sticky results and printing. The repository now
+contains a Capacitor 8.5.3 Android project, bundled offline assets, native share
+and print bridges, a draft privacy page and local-data deletion controls.
+See ANDROID_BUILD.txt for build steps, PLAY_STORE_GUIDE.txt for account setup,
+for the review findings and remaining release work.
+
+JavaScript/browser checks pass, but Android compilation stopped because this
+environment has no configured Java/JDK or Android SDK. No APK/AAB was produced,
+signed or installed on a phone. No Play Console submission has been made.
+
+AGREED ANDROID AD-OFFER CONTROLS
+
+- Keep the prompt to "Watch ad" and "Not now".
+- "Not now" suppresses further offers for the rest of the user's local day.
+- Put an "Offer optional ads" On/Off switch in Android's in-app settings.
+  Remember this preference across restarts; users can enable offers again later.
+- Do not add "Don't ask again" to the popup.
+- A user must choose to watch each ad. Declining or dismissing an ad must not
+  block a comparison, remove its result or restrict comparison features.
+- Show the result before any offer. The initial idea was an offer after five
+  completed comparisons. Define a completed comparison before implementing
+  the counter: the current app recalculates while users edit fields.
+
+These controls are agreed, but no ad integration has been added. The provider,
+format and any optional reward remain undecided. The suggested cosmetic theme
+is an example, not an approved feature or a reason to restrict existing tools.
+
+Do not implement a "watch to support the developers" request with AdMob.
+Google's non-rewarded inventory rules prohibit soliciting ad views, and its
+rewarded-ad rules separately prohibit business-support appeals. A rewarded
+format requires a real, clearly described permitted reward. Voluntary acceptance
+does not override these rules. Check the chosen format before implementation.
+https://support.google.com/admob/answer/48182
+https://support.google.com/admob/answer/7313578
+
+Do not promise an exact 5-30 second duration or an immediate skip button;
+close timing depends on the provider, configuration and creative. Verify it
+against the actual Android experience before describing it to users.
+https://support.google.com/admob/answer/6066980
+
+An agreement to watch an ad is separate from any required data-use consent.
+If Android ads ship, audit SDK initialization and requests, update privacy and
+Data safety disclosures, and declare that the Android app contains ads.
+https://support.google.com/admob/answer/10502938
+
+FIRST ANDROID RELEASE IN SOURCE
+
+The Android project reuses the calculation code and bundles the interface,
+OCR/barcode libraries and language files locally using Capacitor. The web app
+remains responsive and shares the calculation tests. Android import, sharing,
+printing, navigation and persistence still need installed-device checks.
+https://capacitorjs.com/docs/getting-started
+
+This initial native scope includes comparisons, saved work, planning and
+selected-photo OCR/barcodes. It uses manual exchange rates and excludes
+household sharing, automatic FX, ads, accounts and billing. Android's system
+file chooser selects existing photos; direct camera capture is not implemented.
+File export uses the Android share sheet, whose available destinations depend
+on installed apps. Verify these workflows before advertising them on Play.
+
+RELEASE GATES
+
+1. Fix the scope and publishing identity.
+
+Decide the developer identity, support/privacy contact, initial distribution
+countries and intended audience before writing the final policy or listing.
+Use the real audience; do not select age groups just to bypass requirements.
+Publishers must complete identity verification. Public developer information
+depends on account type, monetization and regional requirements.
+https://support.google.com/googleplay/android-developer/answer/13628312
+
+2. Inventory what the actual build does with data.
+
+Current source:
+- Comparisons, saved products/history, preferences, scenarios and cached rates
+  use localStorage. Web household credentials use sessionStorage.
+- Photo OCR and barcode reading use bundled libraries and process selected
+  images locally. The capture code does not upload photos.
+- Web automatic currency conversion calls api.frankfurter.dev with currency codes.
+  Requests also expose ordinary connection metadata to the receiving service.
+  Provider logging and retention have not been verified.
+- Optional web household sharing sends member names and reviewed comparison data
+  to this app's server. It is disabled by default. Its data and credentials
+  require their own retention, deletion and security review before release.
+- Web hosting can receive request metadata. Check the chosen host's logs and
+  retention; source code alone cannot establish the host's behavior.
+- No advertising, billing or analytics integration was found in the app source.
+  Recheck every dependency and Android plugin added later.
+- Android hides households and automatic FX, bundles the capture assets, and
+  restricts page connections to its local origin. Its source disables Android
+  backup/device transfer. Exports use temporary cache files and the share sheet.
+  The actual native binary and its network behavior remain unverified.
+
+Before release, capture network traffic from the signed build through startup,
+offline use, scanning, imports, exports and all enabled network features.
+Review Android backup/restore behavior as well as the app's own storage.
+Do not declare "no data collected" solely because there are no ads or accounts.
+Google excludes purely on-device processing from collection, but off-device
+processing and SDK behavior must be assessed using the Data safety guidance.
+https://support.google.com/googleplay/android-developer/answer/10787469
+
+3. Implement privacy, deletion and permission controls.
+
+A draft privacy page and in-app link now exist. Complete the publisher/contact
+and hosting details, review it against the final release, and publish it at a
+public HTTPS URL. It must identify Parimere/the developer and explain the data
+handled, recipients, purposes, retention and deletion. Google requires a policy
+even for apps that do not access personal or sensitive data. The local draft
+does not satisfy this publication requirement.
+https://support.google.com/googleplay/android-developer/answer/10144311
+
+"Data on this device" now provides "Delete all local data" for saved work,
+catalog/history, preferences, cached data and local access. The native path also
+removes its temporary export cache. Web checks cover erasure across open tabs;
+native JavaScript checks use a mocked Filesystem plugin. Verify real Android
+erasure before release. Clearing the current comparison remains a separate action.
+If online accounts or memberships ship, assess account-deletion requirements
+and implement the necessary in-app and web request paths. Current household
+leave/delete actions are not evidence that all policy requirements are met.
+https://support.google.com/googleplay/android-developer/answer/13327111
+
+Use the Android system picker for selected images. Avoid broad photo-library,
+contacts, location, SMS and phone permissions. Request camera access only if
+the chosen implementation needs it, when the user invokes capture; support
+permission denial. Inspect the merged Android manifest, including SDK entries.
+https://support.google.com/googleplay/android-developer/answer/14115180
+
+4. Make and verify a useful Android release.
+
+Required evidence: correct units/promotions/rounding, live updates, saved-data
+recovery, airplane-mode calculations, large text, keyboard and system Back,
+rotation/background recovery, denied permissions, scanning, Android file
+import/export/share, upgrades, and a clean install on actual devices.
+The browser tests are useful evidence but do not replace Android testing.
+
+Bundle all required assets and third-party notices. Review every license and
+dependency for the exact release. Preserve an accessible acknowledgements page.
+Tesseract notices have been restored and the web app links to a combined notice
+file. Native packaging also adds the Capacitor/plugin license files. This does
+not close the full language-data provenance or transitive license review,
+including the actual Maven dependencies resolved by an Android build.
+The web service worker is excluded from native packaging. Native JavaScript
+checks verify bundled OCR/barcodes with external requests blocked; they do not
+establish installed Android behavior.
+
+On 2026-10-21, npm audit reported zero vulnerabilities after the xcode build
+dependency's uuid was overridden to 11.1.1. This finding covers the npm lockfile,
+not every Android/Maven dependency or a future version. See ANDROID_BUILD.txt.
+
+Prepare a signed Android App Bundle, protect upload keys and use Play App
+Signing. Check target API, native-library compatibility and current release
+requirements immediately before submission rather than freezing old versions.
+https://developer.android.com/studio/publish/preparing
+https://support.google.com/googleplay/android-developer/answer/11926878
+
+Google reviews usefulness and stability. A calculator has practical utility,
+but neither its category nor its framework guarantees approval.
+https://support.google.com/googleplay/android-developer/answer/9898783
+
+5. Complete the listing and account-specific testing.
+
+Set the listing to free. Declare ads according to the actual Android build:
+optional ads still require a "Contains ads" declaration. Complete Data safety,
+content rating, audience, reviewer access and other applicable forms truthfully.
+Use screenshots from the actual Android build. Describe comparison of entered
+prices and quantities; do not claim live shopping prices or guaranteed savings.
+Explain estimates, entered taxes/fees and expected rebates where relevant.
+https://support.google.com/googleplay/android-developer/answer/9859455
+
+Complete the Financial features declaration too. Google requires it even when
+an app offers no financial features. Review the actual release against the form;
+do not infer that a shopping calculator offers regulated services simply because
+it displays currency, or claim an exemption without checking.
+https://support.google.com/googleplay/android-developer/answer/13849271
+
+Start Play distribution with internal testing, which can include the developer's
+own Google account. It does not require 12 testers or a 14-day closed test.
+Choose the permanent application ID before uploading the first signed bundle.
+https://support.google.com/googleplay/android-developer/answer/9845334
+
+Current registration fee: US$25 once. Before applying for production access,
+personal developer accounts created after 2023-11-13 must run a closed test
+with at least 12 testers continuously opted in for 14 days. Internal testing
+does not satisfy that requirement. Completion does not guarantee approval.
+Verify the requirements shown for the actual account before release.
+https://support.google.com/googleplay/android-developer/answer/6112435
+https://support.google.com/googleplay/android-developer/answer/14151465
+
+A package already offered free cannot later be changed to a paid-download app.
+No ads, purchases or subscriptions are required to keep offering it free.
+https://support.google.com/googleplay/android-developer/answer/6334373
+
+6. Review, release and maintain.
+
+Resolve the checklist against the actual signed build, test feedback and store
+forms before submitting. Have jurisdiction-specific privacy/consumer obligations
+and any terms reviewed for the chosen launch countries. Store approval does not
+establish zero liability, and a disclaimer does not replace correct behavior.
+Retain test evidence and a release checklist; handle support and policy updates.
+Revisit declarations whenever data flows, SDKs or features change.
+
+NEXT DELIVERABLES, BEFORE PLAY SUBMISSION
+
+- Confirmed version-one feature list and publishing identity/countries/audience.
+- Compiled, signed Android App Bundle and physical-device test evidence.
+- Completed data inventory and network/permission audit for that build.
+- Verified native erasure and any account deletion needed by future features.
+- Completed public privacy policy, publishing identity and support contact.
+- Store listing, accurate declarations and required tester evidence.
+
+The current review implements preparation work and provides an account guide.
+It has not created an account, paid a fee, published the web app or submitted
+an Android release.

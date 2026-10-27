@@ -8,16 +8,34 @@
     "test": "node --test tests/*.test.mjs",
     "prepare": "node scripts/prepare-vendor.mjs",
     "test:browser": "node tests/browser.cjs",
+    "test:android-js": "node tests/native-browser.cjs",
     "test:optimizer": "node tests/optimizer-browser.cjs",
     "test:release-fixes": "node tests/release-fixes.cjs",
-    "build:web": "node scripts/prepare-vendor.mjs && node scripts/prepare-search.mjs && node discovery/build.mjs"
+    "build:web": "node scripts/prepare-vendor.mjs && node scripts/prepare-search.mjs && node discovery/build.mjs",
+    "build:android": "npm run build:web && node scripts/build-mobile.mjs && cap sync android",
+    "android:open": "cap open android",
+    "android:debug": "node scripts/android-build.mjs debug",
+    "android:bundle": "node scripts/android-build.mjs release",
+    "check:release": "node scripts/check-release.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/share": "8.0.3",
     "@tesseract.js-data/eng": "1.0.0",
     "@zxing/browser": "0.2.1",
     "tesseract.js": "7.0.0"
   },
   "devDependencies": {
-    "@playwright/test": "1.64.0"
+    "@capacitor/cli": "8.5.3",
+    "@playwright/test": "1.64.0",
+    "esbuild": "0.28.2"
+  },
+  "overrides": {
+    "xcode": {
+      "uuid": "11.1.1"
+    }
   }
 }

@@ -1,0 +1,110 @@
+PARIMERE ANDROID BUILD
+Updated October 21, 2026
+
+October 22: these commands describe the retained Capacitor wrapper. New native
+development is in ../parimere-mobile using React Native/Expo for Android and
+future iPhone support. Read that folder's README.txt for its build profiles.
+
+The web app remains in dist and runs with npm start. Android bundles a copy of
+that interface and its local OCR/barcode files into a Capacitor app. The first
+Android build uses manual exchange rates and has no households, ads, accounts,
+billing or analytics. Files are imported through the system file chooser and
+exported through Android's share sheet. Print opens Android's print service.
+Saving an export outside Parimere depends on a receiving app that can save
+files. This build does not provide Android's separate Save as document picker.
+Web and Android save separate local data; export/import a comparison to transfer
+it. This project targets Android phones, not iOS.
+
+CURRENT STATUS
+
+Native source and asset packaging exist. JavaScript/browser tests do not prove
+the Android binary works. The local compile attempt stopped because Java and
+the Android SDK are not installed. No APK/AAB has been compiled, signed or
+tested on a physical phone in this review. Do not upload before those checks.
+
+INSTALL BUILD TOOLS
+
+Install Android Studio Otter 2025.2.1 or newer, Android SDK Platform 36 and SDK
+Build Tools through its SDK Manager. Use Java/JDK 21 for Gradle. Android Studio
+includes a JDK; configure JAVA_HOME for command-line builds or use the IDE.
+Use Node 24.13 or newer for the existing server and build tools.
+https://capacitorjs.com/docs/getting-started/environment-setup
+https://capacitorjs.com/docs/updating/8-0
+
+FROM THIS DIRECTORY
+
+  npm ci
+  npm test
+  npm run test:browser
+  npm run build:android
+  npm run android:open
+
+On Windows PowerShell, use npm.cmd if its execution policy blocks npm.ps1.
+In Android Studio, let Gradle sync, choose a connected phone or emulator, then
+Run. The command-line equivalent after setting up Java/SDK is:
+
+  npm run android:debug
+
+Debug build output:
+  android/app/build/outputs/apk/debug/app-debug.apk
+
+Debug uses application ID app.parimere.mobile.debug so it does not replace a
+future installed release. Its data is separate from the release app.
+
+RELEASE IDENTITY AND SIGNING
+
+app.parimere.mobile is provisional. Confirm it before the first Play upload.
+To change it, update capacitor.config.json, android/app/build.gradle namespace
+and applicationId, Java package declarations/directories, and strings.xml.
+Keep the package ID stable after publication. Update versionName and increase
+versionCode in android/app/build.gradle for subsequent Play uploads.
+
+Fill the public fields in release-config.json. Complete dist/privacy.html and
+host it at a public HTTPS URL, then rebuild Android assets. Do not put secrets
+in either file. npm run check:release lists missing local release prerequisites.
+
+Android Studio: Build > Generate Signed App Bundle or APK > Android App Bundle.
+Create/provide an upload keystore, select release, and keep an encrypted backup
+of the keystore and passwords outside the repository. Enroll in Play App Signing.
+
+For command-line signing, provide these environment variables securely in the
+terminal/session or CI secrets, then run npm run android:bundle:
+  PARIMERE_KEYSTORE        absolute path to the upload keystore
+  PARIMERE_STORE_PASSWORD  keystore password
+  PARIMERE_KEY_ALIAS       upload key alias
+  PARIMERE_KEY_PASSWORD    upload key password
+
+Release output:
+  android/app/build/outputs/bundle/release/app-release.aab
+
+The script refuses a release build without all four signing variables. Direct
+Gradle/IDE builds can still create unsigned outputs; inspect the final signature.
+Never commit upload keys, passwords or local.properties. No key was generated
+by this review. A signing key is different from a household membership key.
+
+BEFORE TESTING OR UPLOADING
+
+Always run npm run build:android after web/native source changes so the Android
+asset copy is current. Test the actual release build, including a fresh install,
+upgrade, offline startup, selected-photo OCR/barcodes, JSON import, CSV/JSON share,
+print/save to PDF, cancelled file pickers, local erasure, numeric keyboard,
+rotation, background recovery, large font sizes and Android Back. Check old and
+current supported Android/WebView versions. The minimum SDK is API 26 (Android 8).
+WebView 120 or newer is required. Older versions show an update instruction page.
+
+Review the merged manifest and final APK/AAB libraries. This source requests
+INTERNET only; do not add broad storage/photo permissions for occasional picks.
+Native files are bundled locally, network FX is disabled, and Android backup/
+device-transfer rules exclude app data. Verify these promises in the final
+binary with network capture and backup/restore checks.
+
+Read PLAY_STORE_GUIDE.txt for account setup, store assets, declarations and
+closed-test requirements. The release check script is a preparation aid, not a
+claim that Google will approve the app.
+
+DEPENDENCY REVIEW
+
+Capacitor 8.5.3 uses xcode as a build-tool dependency. Its older UUID dependency
+was overridden to patched CommonJS-compatible uuid 11.1.1 after npm audit found
+GHSA-w5hq-g745-h8pq. xcode uses the supported uuid.v4 API. Recheck the override
+when updating Capacitor. This dependency is not part of the Android app runtime.

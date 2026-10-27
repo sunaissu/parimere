@@ -1,0 +1,4 @@
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/parimere_blue" />
+    <foreground android:drawable="@drawable/parimere_foreground" />
+</adaptive-icon>

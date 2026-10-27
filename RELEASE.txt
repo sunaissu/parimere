@@ -1,20 +1,48 @@
-Release candidate 2026-10-14.1
+Review status 2026-10-22
 Repository: parimere
 Package version: 2.0.0
 Branch: release/2026-10-review
-Local annotated tag: rc/2026-10-14.1
-Status: prepared for review; not published or deployed.
+Previous local annotated tag: rc/2026-10-14.1
+The current Android preparation and review changes are not represented by that tag.
+Status: reviewed fixes passed local checks; remaining release gates are listed below. No public deployment or store submission.
 
 Changes
-Exact comparison and planning, saved comparisons, history/catalog, reviewed imports, CSV/print, scenarios, OCR/barcodes, offline use and optional owner/member household sharing.
+Exact comparison and planning, saved comparisons, history/catalog, reviewed imports, CSV/print, scenarios, OCR/barcodes, offline web use and optional web household sharing. Android source now bundles offline assets through Capacitor, uses manual FX, and provides file-share/print bridges. It excludes households, accounts, automatic FX, ads and billing. A draft privacy page and local-data deletion controls are implemented.
+The new mobile app is a separate sibling, ../parimere-mobile, using React Native, Expo and TypeScript. Its README.txt describes its smaller feature set and independent release checks. The Android commands in this folder still refer to the earlier Capacitor wrapper.
+
+October 22 fixes
+Local writes and reads use matching collection bounds. Corrupt or unsupported stored data stays intact, with recovery export available. One tab holds the saving lock; temporary tabs cannot overwrite it, and stored-value checks reject external changes. Currency changes clear old-currency budgets and delivery settings visibly. Legacy delivery settings require an explicit reset. Pack optimization runs in a cancellable worker and changing inputs invalidates old results.
+Removed redundant authored comments, kept explanations needed for data/race handling, and aligned the favicon with the app icon. Added full notices for verified JavaScript dependencies embedded in scanning bundles and the exact upstream English traineddata license. Preparation now checks the distributed asset hashes against the reviewed notice manifest.
 
 Compatibility and rollout
 Use Node 24.13 or newer. npm ci prepares locked local OCR/barcode assets; serve the source dist directory with serve.mjs. Household sync is disabled by default. Back up its SQLite data while stopped before rollout and preserve membership keys privately.
+Run npm run build:android to prepare/sync the separate native asset copy. ANDROID_BUILD.txt covers Java/JDK 21, the Android SDK, debug builds and signed bundles. PLAY_STORE_GUIDE.txt covers account creation, current Play requirements and listing/testing steps.
 
 Checks
-npm test; npm run test:browser. Real local Chrome covers OCR/barcode, offline reload and two independent household memberships.
-The dated workspace release manifest records completed local checks and exact commits.
+npm test: 45/45 passed. npm run test:browser passed the full Chrome workflow suite, including real OCR/barcode decoding, responsive layouts, household isolation and offline reload. npm run test:release-fixes passed corrupt-data preservation/recovery, full collections, tab isolation/handover, currency changes, explicit delivery reset and immediate optimizer invalidation. npm run test:optimizer passed worker correctness, cancellation, supersession, timeout and offline/CSP checks. Its heavy case took 1512 ms while the UI delivered 75 heartbeats with a 22 ms maximum gap in this desktop run; this is not a phone performance benchmark.
+The final npm run build:android prepared the reviewed assets/notices and completed Capacitor sync. npm run test:android-js then passed against those generated assets with a mocked Capacitor bridge, including real OCR/barcode decoding with external access blocked. This does not test Android plugin execution or installation.
+The installed web npm graph previously reported zero vulnerabilities after overriding xcode's build-tool uuid dependency to 11.1.1; its dependencies have not changed in this fix pass. An official GitHub-reviewed advisory query on October 22 found no matches for the 11 exact embedded npm versions checked. The separate npm bulk audit of those embedded versions timed out. These checks do not cover native/Wasm/Maven dependencies or prove the absence of vulnerabilities.
 
 Limits and release gates
-Real phone camera permissions, OS installation, live FX service and public hosting remain deployment checks. OCR vendor files are not cached for offline capture. Rollback must preserve local comparison files and the household database.
-Fresh npm registry vulnerability checks remain pending permission to send dependency metadata. No production service or database was changed.
+The Android compile attempt stopped because Java/JDK and the Android SDK are not configured. No APK/AAB was compiled, signed or installed. Physical-device testing, actual native share/print/picker behavior, upgrades and the signed build's network/permission audit remain required. Android selects existing photos; direct camera capture is not implemented.
+The privacy page remains a draft. Complete publisher/contact/country/audience choices, host a final public policy, prepare store assets, verify the account and complete applicable Play testing/declarations before submission. Review the components compiled into OCR Wasm and the resolved native/Maven libraries and licenses. The new Expo app has separate unpatched upstream tooling advisories tracked in its release notes.
+Public web hosting and live FX remain deployment checks. Web OCR vendor files are not cached for offline capture; Android packages them locally. Rollback must preserve local comparison files and any household database. No production service or database was changed.
+
+The legacy web/Capacitor OCR build pins libwebp 1.2.2 at 20ef03ee351d4ff03fc5ff3ec4804a879d1b9d5c in tesseract.js-core 7.0.0, within the affected range for CVE-2023-4863 (https://nvd.nist.gov/vuln/detail/CVE-2023-4863). The current capture path decodes uploads in the browser, draws a new canvas, and sends its PNG encoding to OCR; raw uploaded WebP does not reach that Wasm decoder through this path. No exploitable app path was established in this review. Updating/rebuilding the native OCR dependencies remains a maintenance item; preserve this boundary when adding capture paths. The new React Native app does not include this OCR bundle.
+
+Brand and asset screening
+Indexed exact-name/variant and app-store web searches found no obvious Parimere software conflict. They are preliminary: IPOPHL, WIPO and USPTO registry/name/design queries were not completed. WIPO required a browser challenge and the other available search pages did not provide submitted-query results. No image-similarity search was completed. No absence of registration is inferred from an empty form or indexed results.
+The percent icon is simple geometry. Repository history does not prove originality or ownership. The separate bg_ creator mark and sunaissu credit also need source/ownership confirmation. The owner requested availability in all supported countries; official brand screening remains incomplete. brandReviewCompleted and assetRightsConfirmed remain false in release-config.json; do not treat the name or logo as legally cleared.
+Official search references:
+https://www.ipophil.gov.ph/trademark/trademark-online-tools/
+https://www.wipo.int/en/web/global-brand-database/index
+https://www.uspto.gov/trademarks/search/comprehensive-clearance-search-similar-trademarks
+
+Owner's publishing preferences, October 22
+Personal publisher with requested Google Play developer display name sunaissu. This is separate from the verified legal identity used for the store account. Support email has not been created. Requested distribution is all available countries, with broad general availability; actual target age groups must reflect the app's intended design, and are not finalized by this preference. Primary test phone: Samsung Galaxy S25 Ultra; installed Android version not yet recorded.
+The bg_ creator mark reuses the exact path shapes in ../portfolio/public/logo-mark.svg. The owner says it was created by typing bg_ using a font; the font name and its license still need confirmation. There is no separate sunaissu logo yet. The percent app icon has no external source attribution in the inspected repository. These observations do not establish trademark clearance.
+Google Play allows a developer display name different from a personal legal name, requires a public support email, and requires target ages to reflect the audience actually designed for. Apple individual enrollment uses the person's legal name as developer name. References checked October 22:
+https://support.google.com/googleplay/android-developer/answer/13628312?hl=en
+https://support.google.com/googleplay/android-developer/answer/9859152?hl=en
+https://support.google.com/googleplay/android-developer/answer/9867159?hl=en
+https://developer.apple.com/help/app-store-connect/create-an-app-record/set-your-developer-name
