@@ -1,0 +1,206 @@
+{
+  "verifiedAt": "2026-10-22",
+  "method": "Embedded dependency source files matched the supplied source maps after normalizing line endings. Versions refer to the embedded copies, not the installed dependency tree.",
+  "assets": [
+    {
+      "path": "tesseract.js/dist/tesseract.min.js",
+      "sha256": "000c27d9cd0def655f77b36c72a389c0ab13793aa31cb4d7aab56d09c0afbc7e"
+    },
+    {
+      "path": "tesseract.js/dist/worker.min.js",
+      "sha256": "576b7df7e3393e137e51849357c9adb53fe7ac1bb69bfa06cf3d61520f182c6d"
+    },
+    {
+      "path": "@zxing/browser/umd/zxing-browser.min.js",
+      "sha256": "066bc34edfcdd4a33f0964aeec967752a0dea1ccaf36e58e319ac9fcb5070f6a"
+    },
+    {
+      "path": "@tesseract.js-data/eng/4.0.0/eng.traineddata.gz",
+      "sha256": "ed350f3752f81ee8f38769edc14d92d997dababe23b565c59879372cc46a2468"
+    },
+    {
+      "path": "tesseract.js-core/tesseract-core-lstm.wasm.js",
+      "sha256": "eef5f8b2f8e20e150680b20adaec4a60babafee3adbe8a94583c81fee46e8680",
+      "gitBlob": "57d52b25a1438b086ba0ae8c49e9105957f306b3"
+    },
+    {
+      "path": "tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm.js",
+      "sha256": "861a536cf9ef8e63cb644d57bab39c388f37f7d6b6f60024b741c5f6b39a59b3",
+      "gitBlob": "dbc88c372a923875187d611d527774f169d47561"
+    },
+    {
+      "path": "tesseract.js-core/tesseract-core-simd-lstm.wasm.js",
+      "sha256": "c58b46a4c796c0b8afccf77591d5b875b6896b45d402bbce8caa6f5362447b38",
+      "gitBlob": "c831ffec0db84e022ec5be2cdf1d4e4ae797d593"
+    }
+  ],
+  "notices": [
+    {
+      "name": "regenerator-runtime",
+      "version": "0.13.11",
+      "license": "MIT",
+      "source": "https://github.com/facebook/regenerator/tree/main/packages/runtime",
+      "licenseFile": "regenerator-runtime-LICENSE.txt"
+    },
+    {
+      "name": "zlibjs",
+      "version": "0.3.1",
+      "license": "MIT",
+      "source": "git://github.com/imaya/zlib.js.git",
+      "licenseFile": "zlibjs-LICENSE.txt"
+    },
+    {
+      "name": "bmp-js",
+      "version": "0.1.0",
+      "license": "MIT",
+      "source": "https://github.com/shaozilee/bmp-js",
+      "licenseFile": "bmp-js-LICENSE.txt"
+    },
+    {
+      "name": "is-url",
+      "version": "1.2.4",
+      "license": "MIT",
+      "source": "https://github.com/segmentio/is-url",
+      "licenseFile": "is-url-LICENSE.txt"
+    },
+    {
+      "name": "base64-js",
+      "version": "1.5.1",
+      "license": "MIT",
+      "source": "git://github.com/beatgammit/base64-js.git",
+      "licenseFile": "base64-js-LICENSE.txt"
+    },
+    {
+      "name": "ts-custom-error",
+      "version": "3.3.1",
+      "license": "MIT",
+      "source": "github:adriengibrat/ts-custom-error",
+      "licenseFile": "ts-custom-error-LICENSE.txt"
+    },
+    {
+      "name": "buffer",
+      "version": "6.0.3",
+      "license": "MIT",
+      "source": "https://github.com/feross/buffer/tree/v6.0.3",
+      "licenseFile": "buffer-LICENSE.txt"
+    },
+    {
+      "name": "ieee754",
+      "version": "1.2.1",
+      "license": "BSD-3-Clause",
+      "source": "https://github.com/feross/ieee754/tree/v1.2.1",
+      "licenseFile": "ieee754-LICENSE.txt"
+    },
+    {
+      "name": "wasm-feature-detect",
+      "version": "1.8.0",
+      "license": "Apache-2.0",
+      "source": "https://registry.npmjs.org/wasm-feature-detect/-/wasm-feature-detect-1.8.0.tgz",
+      "licenseFile": "wasm-feature-detect-LICENSE.txt"
+    },
+    {
+      "name": "idb-keyval",
+      "version": "6.2.1",
+      "license": "Apache-2.0",
+      "source": "https://registry.npmjs.org/idb-keyval/-/idb-keyval-6.2.1.tgz",
+      "licenseFile": "idb-keyval-LICENSE.txt"
+    },
+    {
+      "name": "@zxing/library",
+      "version": "0.22.0",
+      "license": "Apache-2.0",
+      "source": "https://registry.npmjs.org/@zxing/library/-/library-0.22.0.tgz",
+      "licenseFile": "zxing-library-LICENSE.txt"
+    }
+  ],
+  "languageData": {
+    "package": "@tesseract.js-data/eng",
+    "version": "1.0.0",
+    "metadataLicense": "MIT",
+    "license": "Apache-2.0",
+    "source": "https://github.com/naptha/tessdata/blob/806cd9adc8c6e8abc11c782db1818c990576bebc/4.0.0/eng.traineddata.gz",
+    "gitBlob": "e83c1267675ff3a6641b110002363782db7a1885",
+    "licenseSource": "https://github.com/naptha/tessdata/blob/806cd9adc8c6e8abc11c782db1818c990576bebc/LICENSE",
+    "licenseFile": "tessdata-LICENSE.txt"
+  },
+  "nativeBuild": {
+    "package": "tesseract.js-core",
+    "version": "7.0.0",
+    "source": "https://github.com/naptha/tesseract.js-core/tree/v7.0.0",
+    "buildSource": "https://github.com/naptha/tesseract.js-core/blob/v7.0.0/build.sh",
+    "dependencySource": "https://github.com/naptha/tesseract.js-core/tree/v7.0.0/third_party",
+    "method": "The three distributed LSTM WASM wrappers match Git blobs at the upstream v7.0.0 tag. These notices cover the native dependencies pinned by that tag and named in its build scripts; this is not a complete toolchain or security inventory."
+  },
+  "nativeNotices": [
+    {
+      "name": "leptonica",
+      "revision": "4af068b56a9674da915debea4ed7e1b9885b17e8",
+      "license": "BSD-2-Clause",
+      "source": "https://github.com/DanBloomberg/leptonica/blob/4af068b56a9674da915debea4ed7e1b9885b17e8/leptonica-license.txt",
+      "licenseFile": "native-leptonica-LICENSE.txt"
+    },
+    {
+      "name": "tesseract",
+      "revision": "2a9c1c49c360462733c386d2a44fcd22c4e21411",
+      "license": "Apache-2.0",
+      "source": "https://github.com/Balearica/tesseract/blob/2a9c1c49c360462733c386d2a44fcd22c4e21411/LICENSE",
+      "licenseFile": "native-tesseract-LICENSE.txt"
+    },
+    {
+      "name": "giflib",
+      "revision": "fa37672085ce4b3d62c51627ab3c8cf2dda8009a",
+      "license": "MIT",
+      "source": "https://github.com/mirrorer/giflib/blob/fa37672085ce4b3d62c51627ab3c8cf2dda8009a/COPYING",
+      "licenseFile": "native-giflib-LICENSE.txt"
+    },
+    {
+      "name": "libjpeg",
+      "revision": "6c0fcb8ddee365e7abc4d332662b06900612e923",
+      "license": "IJG",
+      "source": "https://github.com/LuaDist/libjpeg/blob/6c0fcb8ddee365e7abc4d332662b06900612e923/README",
+      "licenseFile": "native-libjpeg-LICENSE.txt"
+    },
+    {
+      "name": "libpng",
+      "revision": "a37d4836519517bdce6cb9d956092321eca3e73b",
+      "license": "Libpng-2.0",
+      "source": "https://github.com/pnggroup/libpng/blob/a37d4836519517bdce6cb9d956092321eca3e73b/LICENSE",
+      "licenseFile": "native-libpng-LICENSE.txt"
+    },
+    {
+      "name": "libwebp",
+      "revision": "20ef03ee351d4ff03fc5ff3ec4804a879d1b9d5c",
+      "license": "BSD-3-Clause",
+      "source": "https://github.com/webmproject/libwebp/blob/20ef03ee351d4ff03fc5ff3ec4804a879d1b9d5c/COPYING",
+      "licenseFile": "native-libwebp-LICENSE.txt"
+    },
+    {
+      "name": "libwebp-patents",
+      "revision": "20ef03ee351d4ff03fc5ff3ec4804a879d1b9d5c",
+      "license": "Additional IP Rights Grant",
+      "source": "https://github.com/webmproject/libwebp/blob/20ef03ee351d4ff03fc5ff3ec4804a879d1b9d5c/PATENTS",
+      "licenseFile": "native-libwebp-patents-LICENSE.txt"
+    },
+    {
+      "name": "openlibm",
+      "revision": "ae2d91698508701c83cab83714d42a1146dccf85",
+      "license": "Mixed; see upstream notice",
+      "source": "https://github.com/JuliaMath/openlibm/blob/ae2d91698508701c83cab83714d42a1146dccf85/LICENSE.md",
+      "licenseFile": "native-openlibm-LICENSE.txt"
+    },
+    {
+      "name": "zlib",
+      "revision": "21767c654d31d2dccdde4330529775c6c5fd5389",
+      "license": "Zlib",
+      "source": "https://github.com/madler/zlib/blob/21767c654d31d2dccdde4330529775c6c5fd5389/README",
+      "licenseFile": "native-zlib-LICENSE.txt"
+    },
+    {
+      "name": "libtiff",
+      "revision": "b51bb157123264e26d34c09cc673d213aea61fc7",
+      "license": "libtiff",
+      "source": "https://gitlab.com/libtiff/libtiff/-/blob/b51bb157123264e26d34c09cc673d213aea61fc7/COPYRIGHT",
+      "licenseFile": "native-libtiff-LICENSE.txt"
+    }
+  ]
+}
