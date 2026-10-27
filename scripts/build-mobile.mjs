@@ -22,7 +22,7 @@ await build({
   legalComments: "eof",
 });
 const policy = "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'";
-for (const page of ["index.html", "privacy.html"]) {
+for (const page of ["index.html", "privacy.html", "about.html"]) {
   let html = await readFile(new URL(page, output), "utf8");
   html = html.replace('<meta charset="UTF-8" />', `<meta charset="UTF-8" />\n    <meta http-equiv="Content-Security-Policy" content="${policy}" />`);
   if (!html.includes("viewport-fit=cover"))

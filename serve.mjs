@@ -13,6 +13,7 @@ const files = [
   "platform.mjs",
   "default-currency.mjs",
   "privacy.html",
+  "about.html",
   "robots.txt",
   "sitemap.xml",
   "guide.html",

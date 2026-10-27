@@ -233,7 +233,7 @@ export function createWorkspace(api) {
     try { scenario = documentData(storedScenario); }
     catch { protectLocalData("scenario", "The original scenario could not be restored. Its saved data has been kept."); }
   }
-  const host = node("details", undefined, "workspace"),
+  const host = node("section", undefined, "workspace"),
     status = node(
       "p",
       "",
@@ -241,10 +241,18 @@ export function createWorkspace(api) {
     );
   status.role = "status";
   status.hidden = true;
-  const workspaceSummary = node("summary", "More tools");
+  const workspaceSummary = node("h2", "Your comparison tools");
+  workspaceSummary.id = "comparison-tools-title";
+  host.setAttribute("aria-labelledby", workspaceSummary.id);
+  host.id = "comparison-tools";
+  host.setAttribute("popover", "auto");
+  host.setAttribute("role", "dialog");
   const activePlan = node("span", "", "active-plan");
   workspaceSummary.append(activePlan);
   host.append(workspaceSummary);
+  const closeTools = button("Back to comparison", () => host.hidePopover());
+  closeTools.className = "close-tools";
+  host.append(closeTools);
   const toolbar = node("div", undefined, "workspace-toolbar"),
     nameInput = node("input");
   nameInput.id = "comparison-name";
@@ -583,6 +591,18 @@ export function createWorkspace(api) {
     dialogContent,
   );
   document.body.append(dialog);
+  const showToolDialog = (overlay) => {
+    const returnToTools = host.matches(":popover-open");
+    const previousFocus = document.activeElement;
+    overlay.addEventListener("close", () => {
+      if (returnToTools && !localDataErased()) {
+        host.showPopover();
+        if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+      }
+    }, { once: true });
+    overlay.showModal();
+  };
+  const showTransferDialog = () => showToolDialog(dialog);
   const preview = (value, importing = false) => {
     const data = documentData(value);
     dialogContent.replaceChildren(
@@ -615,7 +635,7 @@ export function createWorkspace(api) {
         }),
       ),
     );
-    dialog.showModal();
+    showTransferDialog();
   };
   const file = node("input");
   file.type = "file";
@@ -867,7 +887,7 @@ export function createWorkspace(api) {
         }),
       ),
     );
-    dialog.showModal();
+    showTransferDialog();
   }
   function drawCatalog() {
     catalogList.replaceChildren();
@@ -1136,6 +1156,7 @@ export function createWorkspace(api) {
     prefs,
     dataSettings,
     ...(!isNative ? [householdPanel({
+      showDialog: showToolDialog,
       current,
       load,
       remember,
@@ -1146,21 +1167,52 @@ export function createWorkspace(api) {
       },
     })] : []),
   );
+  const groups = [
+    ["Save and organise", "Keep comparisons and products ready for your next shop.", [transfers, catalogPanel]],
+    ["Plan your purchase", "Check quantities, budgets and the cost of a whole basket.", [plan, scenarioPanel, basket]],
+    ["Preferences and sharing", "Manage your regional settings, local data and optional sharing.", [prefs, dataSettings, ...Array.from(host.children).filter(child => child.tagName === "DETAILS" && ![transfers, catalogPanel, plan, scenarioPanel, basket, prefs, dataSettings].includes(child))]],
+  ];
+  for (const [title, description, panels] of groups) {
+    const group = node("section", undefined, "tool-group");
+    group.append(node("h3", title), node("p", description, "tool-group-description"));
+    const grid = node("div", undefined, "tool-grid");
+    for (const panel of panels) {
+      panel.classList.add("workspace-panel");
+      grid.append(panel);
+    }
+    group.append(grid);
+    host.append(group);
+  }
   document.querySelector(".comparison-layout").after(host);
   host.before(status);
   const shortcuts = node("div", undefined, "workspace-toolbar tool-shortcuts");
+  const openTools = (panel) => {
+    host.showPopover();
+    if (panel) {
+      panel.open = true;
+      panel.scrollIntoView({ block: "start" });
+      panel.querySelector("summary").focus({ preventScroll: true });
+    } else {
+      host.scrollTop = 0;
+      closeTools.focus({ preventScroll: true });
+    }
+  };
   shortcuts.append(
-    button("Save / open", () => {
-      transfers.open = true;
-      transfers.scrollIntoView({ behavior: "smooth", block: "start" });
-    }),
-    button("Plan purchase", () => {
-      plan.open = true;
-      plan.scrollIntoView({ behavior: "smooth", block: "start" });
-    }),
+    button("Save / open", () => openTools(transfers)),
+    button("Plan purchase", () => openTools(plan)),
+    button("All tools", () => openTools()),
     button("Shopping mode", () => document.body.classList.toggle("shopping")),
   );
-  workspaceSummary.after(shortcuts);
+  for (const control of Array.from(shortcuts.children).slice(0, 3)) {
+    control.setAttribute("aria-controls", host.id);
+    control.setAttribute("aria-haspopup", "dialog");
+    control.setAttribute("aria-expanded", "false");
+  }
+  host.addEventListener("toggle", () => {
+    for (const control of Array.from(shortcuts.children).slice(0, 3))
+      control.setAttribute("aria-expanded", String(host.matches(":popover-open")));
+  });
+  document.querySelector(".comparison-layout").before(shortcuts);
   const quick = node("div", undefined, "quick-tools");
   const quickUndo = button("Undo", () => undo.click());
   quickUndo.hidden = true;

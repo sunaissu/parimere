@@ -11,7 +11,7 @@
     "test:android-js": "node tests/native-browser.cjs",
     "test:optimizer": "node tests/optimizer-browser.cjs",
     "test:release-fixes": "node tests/release-fixes.cjs",
-    "build:web": "node scripts/prepare-vendor.mjs && node scripts/prepare-search.mjs && node discovery/build.mjs",
+    "build:web": "node scripts/prepare-vendor.mjs && node scripts/prepare-search.mjs && node discovery/build.mjs && node scripts/build-about.mjs",
     "build:android": "npm run build:web && node scripts/build-mobile.mjs && cap sync android",
     "android:open": "cap open android",
     "android:debug": "node scripts/android-build.mjs debug",

@@ -15,8 +15,8 @@ async function ready(page) {
 }
 async function openPanel(page, label) {
   const workspace = page.locator(".workspace");
-  if (!(await workspace.evaluate((element) => element.open)))
-    await workspace.locator(":scope > summary").click();
+  if (!(await workspace.isVisible())) await page.getByRole("button", { name: "All tools", exact: true }).click();
+  await expect(workspace).toBeVisible();
   const summary = page.locator("summary").filter({ hasText: new RegExp("^" + label + "$") });
   if (!(await summary.evaluate((element) => element.parentElement.open))) await summary.click();
 }
@@ -151,6 +151,7 @@ async function currencyBoundaries(browser) {
     await expect(page.locator("#currency-notice")).toContainText("Re-enter your checkout budget and store delivery fees");
     await expect.poll(async () => (await current(page)).options.budget || "").toBe("");
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem("parimere:basket"))), { currency: "USD", stores: {} });
+    await openPanel(page, "Whole-store basket");
     await page.getByRole("button", { name: "Edit store delivery settings", exact: true }).click();
     await expect(page.getByLabel("Shared delivery", { exact: true })).toHaveValue("");
     await page.getByLabel("Shared delivery", { exact: true }).fill("7");
@@ -170,6 +171,7 @@ async function currencyBoundaries(browser) {
     await expect(page.getByLabel("Checkout budget in result currency", { exact: true })).toHaveValue("45");
     assert.equal((await current(page)).options.budget, "45");
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem("parimere:basket"))), { currency: "EUR", stores: {} });
+    await openPanel(page, "Whole-store basket");
     await page.getByRole("button", { name: "Edit store delivery settings", exact: true }).click();
     await expect(page.getByLabel("Shared delivery", { exact: true })).toHaveValue("");
   } finally { await context.close(); }
@@ -226,7 +228,8 @@ async function recoverDeliverySettings(browser) {
       await page.locator("#currency").selectOption("USD");
       assert.equal(await page.evaluate(() => localStorage.getItem("parimere:basket")), original);
       await openPanel(page, "Whole-store basket");
-      await page.getByRole("button", { name: "Edit store delivery settings", exact: true }).click();
+      await openPanel(page, "Whole-store basket");
+    await page.getByRole("button", { name: "Edit store delivery settings", exact: true }).click();
       await expect(page.getByLabel("Shared delivery", { exact: true })).toBeDisabled();
       await page.getByRole("button", { name: "Compare store totals", exact: true }).click();
       await expect(page.locator(".workspace-status")).toContainText("Recover or reset saved delivery settings");
@@ -262,6 +265,7 @@ async function optimizationAndLayouts(browser) {
     const page = await openPage(context);
     await openPanel(page, "Plan the purchase");
     await page.getByLabel("Target quantity in base unit", { exact: true }).fill("2500");
+    await openPanel(page, "Plan the purchase");
     await page.getByRole("button", { name: "Find least-cost pack mix", exact: true }).click();
     await expect(page.locator(".workspace-panel").filter({ has: page.locator("summary", { hasText: "Plan the purchase" }) })).toContainText("Exact lowest checkout cost:");
     assert.equal(await page.evaluate(() => {
@@ -278,6 +282,7 @@ async function optimizationAndLayouts(browser) {
       await route.fulfill({ response, body: source.replace("self.onmessage = ({ data }) => {",
         "self.onmessage = async ({ data }) => { await new Promise(resolve => setTimeout(resolve, 500));") });
     });
+    await openPanel(page, "Plan the purchase");
     await page.getByRole("button", { name: "Find least-cost pack mix", exact: true }).click();
     await expect(page.getByRole("button", { name: "Cancel pack search", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Cancel pack search", exact: true }).click();
@@ -286,6 +291,7 @@ async function optimizationAndLayouts(browser) {
     await expect(page.getByText("Pack search cancelled.", { exact: true })).toBeVisible();
     await expect(page.getByText(/^Exact lowest checkout cost:/)).toHaveCount(0);
 
+    await openPanel(page, "Plan the purchase");
     await page.getByRole("button", { name: "Find least-cost pack mix", exact: true }).click();
     await expect(page.getByRole("button", { name: "Cancel pack search", exact: true })).toBeVisible();
     assert.deepEqual(await page.evaluate(() => {
@@ -307,6 +313,7 @@ async function optimizationAndLayouts(browser) {
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.locator('.product input[id$="-price"]').first().fill(String(width));
       await expect(page.locator('.product input[id$="-price"]').first()).toHaveValue(String(width));
+      await openPanel(page, "Plan the purchase");
       await page.getByRole("button", { name: "Find least-cost pack mix", exact: true }).click();
       await page.getByRole("button", { name: "Cancel pack search", exact: true }).click();
       await expect(page.getByText("Pack search cancelled.", { exact: true })).toBeVisible();
@@ -334,18 +341,38 @@ async function exchangeRates(browser) {
     const page = await openPage(context);
     await expect(page.locator("#currency")).toHaveValue("PHP");
     assert.equal(requests, 0, "Collapsed rates must not request network data");
+    const price = page.locator('.money-input input').first();
+    await price.focus();
+    assert.equal(await price.evaluate(input => getComputedStyle(input).outlineStyle), 'none');
+    assert.equal(await price.evaluate(input => getComputedStyle(input.parentElement).outlineStyle), 'solid');
+    await expect(page.locator('.currency-symbol').first()).toBeVisible();
     await page.locator("#exchange-panel > summary").click();
-    await expect(page.locator("#exchange-rates strong")).toHaveCount(4);
+    await expect(page.locator("#exchange-rates strong")).toHaveCount(6);
     await expect(page.locator("#exchange-rates")).toContainText("1 USD = 58.25 PHP");
     fail = true;
     await page.locator("#exchange-refresh").click();
     await expect(page.locator("#exchange-rates")).toContainText("unavailable. Refresh to retry.");
     fail = false;
     await page.locator("#exchange-refresh").click();
-    await expect(page.locator("#exchange-rates strong")).toHaveCount(4);
+    await expect(page.locator("#exchange-rates strong")).toHaveCount(6);
     await page.locator("#currency").selectOption("EUR");
     await expect(page.locator("#exchange-rates")).toContainText("1 USD = 58.25 EUR");
     await expect(page.locator("#exchange-base")).toHaveText("in EUR");
+    await page.locator('#exchange-source').selectOption('SGD');
+    await page.locator('#exchange-add').click();
+    await expect(page.locator('#exchange-rates')).toContainText('1 SGD = 58.25 EUR');
+    await page.getByRole('button', {name:'Remove SGD from exchange rates', exact:true}).click();
+    await expect(page.locator('#exchange-rates')).not.toContainText('1 SGD');
+    await page.getByRole('button', {name:'All tools', exact:true}).click();
+    await expect(page.getByRole('heading', {name:'Your comparison tools'})).toBeVisible();
+    await page.getByRole('button', {name:'Back to comparison', exact:true}).click();
+    await page.getByRole('button', {name:'Save / open', exact:true}).click();
+    await expect(page.getByLabel('Comparison name', {exact:true})).toBeVisible();
+    await expect(page.locator('footer .maker-credit svg')).toHaveCount(1);
+    await page.getByRole('button', {name:'Back to comparison', exact:true}).click();
+    await expect(page.getByRole('link', {name:'About Parimere', exact:true})).toHaveAttribute('href', './about.html');
+    assert.equal(await page.locator('footer .maker-sunaissu').evaluate(svg => svg.getBBox().width > 0), true);
+
     for (const width of [320, 390, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);

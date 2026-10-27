@@ -16,6 +16,8 @@ const ready = async (page) => {
   await page.locator("#app-shell").waitFor({ state: "visible" });
 };
 const openDetails = (page) => page.evaluate(() => {
+  const tools = document.querySelector('.workspace');
+  if (tools && !tools.matches(':popover-open')) tools.showPopover();
   for (const item of document.querySelectorAll("details")) item.open = true;
 });
 

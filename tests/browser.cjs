@@ -14,8 +14,8 @@ const waitForApp = async (page) => {
 };
 const openTools = async (page) => {
   await waitForApp(page);
-  if (!(await page.locator(".workspace").evaluate((element) => element.open)))
-    await page.locator(".workspace > summary").click();
+  if (!(await page.locator(".workspace").isVisible())) await page.getByRole("button", { name: "All tools", exact: true }).click();
+  await page.locator(".workspace").waitFor({ state: "visible" });
 };
 (async () => {
   const server = spawn(process.execPath, ["serve.mjs"], {
@@ -81,13 +81,13 @@ const openTools = async (page) => {
       await page
         .getByRole("button", { name: "Save / open", exact: true })
         .isVisible(),
-      false,
+      true,
     );
     assert.equal(
       await page
         .getByRole("button", { name: "Plan purchase", exact: true })
         .isVisible(),
-      false,
+      true,
     );
     assert.equal(
       await page
@@ -219,8 +219,8 @@ const openTools = async (page) => {
       await page
         .getByRole("button", { name: "Save / open", exact: true })
         .isVisible(),
-      false,
-      "Advanced tools should remain collapsed when reopening a comparison.",
+      true,
+      "Save/open should remain directly accessible when reopening a comparison.",
     );
     await page.getByRole("button", { name: "Clear comparison", exact: true }).click();
     await page
@@ -300,6 +300,7 @@ const openTools = async (page) => {
       await page.locator(".scenario-grid").textContent(),
       /Original/,
     );
+    await openTools(page);
     await page
       .getByRole("button", { name: "Restore original", exact: true })
       .click();
@@ -642,6 +643,7 @@ const openTools = async (page) => {
         await reviewPage.getByText(/Market:.*135,00/).waitFor();
         await reviewPage.locator(".product").first().locator(".pack-options > summary").click();
         await reviewPage.locator(".product").first().getByRole("button", { name: "Record price", exact: true }).click();
+        await openTools(reviewPage);
         await reviewPage.getByText("Saved products, barcodes & price history", { exact: true }).click();
         await reviewPage.getByRole("button", { name: "Find barcode", exact: true }).click();
         await reviewPage.locator(".workspace-status").getByText("Enter a barcode before searching saved products.", { exact: true }).waitFor();

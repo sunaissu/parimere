@@ -192,7 +192,8 @@ export function householdPanel(api) {
           dialog.remove();
         });
         document.body.append(dialog);
-        dialog.showModal();
+        if (api.showDialog) api.showDialog(dialog);
+        else dialog.showModal();
       }),
     );
     if (state.owner)

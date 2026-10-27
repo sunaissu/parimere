@@ -698,8 +698,15 @@ $("reset").addEventListener("click", () => {
   cards[0].inputs.price.focus();
 });
 let exchangeBase = "", exchangeRequest = 0;
+const exchangeCurrencies = new Set(["USD", "EUR", "GBP", "JPY", "CAD", "AUD"]);
 const exchangePanel = $("exchange-panel");
 exchangePanel.hidden = isNative;
+currencyOptions($("exchange-source"), "SGD");
+$("exchange-add").addEventListener("click", () => {
+  exchangeCurrencies.add($("exchange-source").value);
+  exchangeBase = "";
+  renderExchangePanel();
+});
 async function renderExchangePanel(refresh = false) {
   if (isNative || localDataErased()) return;
   const base = $("currency").value;
@@ -710,7 +717,7 @@ async function renderExchangePanel(refresh = false) {
   const container = $("exchange-rates");
   container.replaceChildren();
   container.setAttribute("aria-busy", "true");
-  const sources = ["USD", "EUR", "GBP", "JPY", "PHP"].filter(code => code !== base).slice(0, 4);
+  const sources = [...exchangeCurrencies].filter(code => code !== base);
   await Promise.all(sources.map(async source => {
     const row = document.createElement("div");
     row.className = "exchange-rate";
@@ -729,7 +736,20 @@ async function renderExchangePanel(refresh = false) {
       if (request !== exchangeRequest || localDataErased()) return;
       row.textContent = source + " → " + base + ": unavailable. Refresh to retry.";
     }
+    if (request !== exchangeRequest || localDataErased()) return;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "exchange-remove";
+    remove.textContent = "Remove";
+    remove.setAttribute("aria-label", "Remove " + source + " from exchange rates");
+    remove.addEventListener("click", () => {
+      exchangeCurrencies.delete(source);
+      exchangeBase = "";
+      renderExchangePanel();
+    });
+    row.append(remove);
   }));
+  if (!sources.length) container.textContent = "Add a currency to see its exchange rate.";
   if (request === exchangeRequest) container.setAttribute("aria-busy", "false");
 }
 exchangePanel.addEventListener("toggle", () => renderExchangePanel());
