@@ -1,6 +1,6 @@
 import { UNITS } from "./math.mjs";
 
-// Reduced fractions retain exact comparisons through discounts, tax and exchange rates.
+// Fractions keep discount, tax and FX comparisons exact.
 const gcd = (a, b) => {
   while (b) {
     const t = a % b;
@@ -206,14 +206,15 @@ export function comparePlanned(products, base = "PHP", options = {}) {
     throw new Error(
       "Use one measurement family. Sheets, doses, length, area, volume, weight and items stay separate.",
     );
-  const basis = positive(
-      decimal(
-        options.basis,
-        "Comparison basis",
-        String(FAMILIES[family].basis),
-      ),
+  const requestedBasis = decimal(
+      options.basis,
       "Comparison basis",
+      String(FAMILIES[family].basis),
     ),
+    // Zero preserves the automatic basis in older saved comparisons.
+    basis = requestedBasis.n
+      ? requestedBasis
+      : new Fraction(BigInt(FAMILIES[family].basis)),
     costs = values.map((v) => (options.rank === "net" ? v.net : v.cash)),
     compare = (a, b) =>
       costs[a].div(values[a].quantity).cmp(costs[b].div(values[b].quantity));
@@ -274,7 +275,7 @@ export function comparePlanned(products, base = "PHP", options = {}) {
     }),
   };
 }
-// Linear cost model permits an exact shelf/offer price threshold with all entered costs held fixed.
+// Hold other costs fixed when solving for the shelf/offer price.
 function breakEvenPrice(product, base, target, net) {
   const key = product.discount === "multibuy" ? "offerPrice" : "price",
     minimum =
@@ -298,6 +299,9 @@ function breakEvenPrice(product, base, target, net) {
     rebate = net ? decimal(product.rebate, "Rebate").mul(rate) : zero;
   if (!slope.n) return null;
   const price = target.sub(a).add(rebate).div(slope).add(minimum);
+  // Keep the suggested price valid for the entered rebate and deposit.
+  if (!net && target.cmp(decimal(product.deposit, "Deposit")
+    .add(decimal(product.rebate, "Rebate")).mul(rate)) < 0) return null;
   return price.cmp(minimum) < 0 ? null : price.number();
 }
 
@@ -359,7 +363,7 @@ export function optimizeMix(products, base, targetValue) {
 export function basketTotals(products, base, settings = {}) {
   const stores = new Map();
   for (const p of products) {
-    const store = (p.store || "Unspecified store").trim(),
+    const store = (p.store || "").trim() || "Unspecified store",
       key = (p.basketItem || p.name || "").trim();
     if (!key)
       throw new Error("Give every basket item a name or matching item key.");

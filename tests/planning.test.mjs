@@ -106,6 +106,40 @@ test("waste yield consumption and independent basis use usable quantity", () => 
   for (const unit of ["sheet", "dose", "m", "m2"])
     assert.throws(() => comparePlanned([p(10), p(10, 1, { unit })]), /family/);
 });
+test("absent, blank and zero comparison bases use each family's default", () => {
+  for (const { products, basis, rates, winners } of [
+    {
+      products: [p(149, 750, { unit: "ml" }), p(189, 1, { unit: "L" })],
+      basis: 100,
+      rates: [149 / 7.5, 18.9],
+      winners: [1],
+    },
+    {
+      products: [p(10, 5), p(12, 4)],
+      basis: 1,
+      rates: [2, 3],
+      winners: [0],
+    },
+  ]) {
+    for (const options of [{}, { basis: "" }, { basis: "0" }, { basis: "0.000000" }]) {
+      const result = comparePlanned(products, "PHP", options);
+      assert.equal(result.basis, basis);
+      assert.deepEqual(result.rates, rates);
+      assert.deepEqual(result.winners, winners);
+    }
+    const custom = comparePlanned(products, "PHP", { basis: "1000" });
+    assert.equal(custom.basis, 1000);
+    custom.rates.forEach((rate, index) =>
+      assert.ok(Math.abs(rate - (rates[index] * 1000) / basis) < 1e-9),
+    );
+    assert.deepEqual(custom.winners, winners);
+    for (const invalid of ["-1", "not-a-number", "1e2"])
+      assert.throws(
+        () => comparePlanned(products, "PHP", { basis: invalid }),
+        /Comparison basis/,
+      );
+  }
+});
 test("cash and expected net rankings remain separate", () => {
   const r = comparePlanned(
     [p(100, 1, { rebate: "40", deposit: "10" }), p(80)],
@@ -128,6 +162,15 @@ test("break-even retains mandatory fees and fixed discount bounds", () => {
     { rank: "net" },
   );
   assert.equal(fixed.plans[0].breakEvenPrice, 90);
+});
+test("cash break-even never recommends a price that invalidates the fixed rebate", () => {
+  const products = [p(100, 1, { rebate: "90", deposit: "5" }), p(20)];
+  assert.equal(comparePlanned(products).plans[0].breakEvenPrice, null);
+  const feasible = comparePlanned([products[0], p(95)]).plans[0].breakEvenPrice;
+  assert.equal(feasible, 90);
+  assert.equal(calculate({ ...products[0], price: String(feasible) }).cash.number(), 95);
+  const net = comparePlanned(products, "PHP", { rank: "net" });
+  assert.equal(net.plans[0].breakEvenPrice, 100);
 });
 test("invalid values never silently produce a winner", () => {
   for (const data of [
@@ -169,6 +212,17 @@ test("basket compares complete stores and applies delivery once", () => {
   assert.equal(result[0].meetsMinimum, true);
   assert.deepEqual(result[1].missing, ["B"]);
   assert.equal(result[1].meetsMinimum, false);
+});
+test("basket store names normalize whitespace and blank names consistently", () => {
+  const result = basketTotals([
+    p(10, 1, { name: "A", store: " Market " }),
+    p(20, 1, { name: "B", store: "Market" }),
+    p(15, 1, { name: "A", store: "   " }),
+  ], "PHP", { Market: { shipping: "5" }, "Unspecified store": { shipping: "2" } });
+  assert.equal(result[0].store, "Market");
+  assert.equal(result[0].total, 35);
+  assert.equal(result[1].store, "Unspecified store");
+  assert.equal(result[1].total, 17);
 });
 test("imports are bounded and spreadsheet exports cannot become formulas", () => {
   assert.throws(() => safeJSON('{"__proto__":{"polluted":true}}'), /key/);
