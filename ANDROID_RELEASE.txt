@@ -19,7 +19,7 @@ laptop and mobile layouts, sticky results and printing. The repository now
 contains a Capacitor 8.5.3 Android project, bundled offline assets, native share
 and print bridges, a draft privacy page and local-data deletion controls.
 See ANDROID_BUILD.txt for build steps, PLAY_STORE_GUIDE.txt for account setup,
-for the review findings and remaining release work.
+and RELEASE.txt for the current findings and remaining release work.
 
 JavaScript/browser checks pass, but Android compilation stopped because this
 environment has no configured Java/JDK or Android SDK. No APK/AAB was produced,
